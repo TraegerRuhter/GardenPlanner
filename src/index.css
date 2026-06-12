@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/**
+ * §21.3 design tokens — starter set, expanded as the design system lands.
+ * Stage and category colors join here so sprites and chart bands stay
+ * consistent. Light theme is default; dark theme arrives with the Settings
+ * module (theme: light | dark | system).
+ */
+:root {
+  --color-paper: #f7f3e8; /* app background, warm paper */
+  --color-paper-deep: #e7dfc9; /* borders, pressed surfaces */
+  --color-ink: #28321f; /* primary text */
+  --color-ink-soft: #5c6650; /* secondary text */
+  --color-canopy: #2f6f3e; /* primary green */
+  --color-leaf: #58a854; /* accent green */
+  --color-soil: #5c4033; /* earth accents */
+  --color-warn: #b3541e; /* non-blocking warnings (§12.6) */
+}
+
+html {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: #1d2317;
+  --color-paper-deep: #2e3826;
+  --color-ink: #e8e6d8;
+  --color-ink-soft: #a8b098;
+  --color-canopy: #4f9e60;
+  --color-leaf: #6fbf63;
+  --color-soil: #9a7a5f;
+  --color-warn: #e07a3e;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* §21.4: the pixel layer (plot sprites) must scale crisply */
+.pixel-art {
+  image-rendering: pixelated;
+}
