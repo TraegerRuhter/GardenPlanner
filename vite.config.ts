@@ -8,7 +8,7 @@ import { VitePWA } from "vite-plugin-pwa";
 // BASE_PATH lets the GitHub Pages build serve from /pandas-challenge/ while
 // local dev and root-domain hosts stay at "/". import.meta.env.BASE_URL (which
 // Vite derives from `base`) feeds the router basename and the SPA asset paths.
-const base = process.env.BASE_PATH || "/";
+const base = process.env.NODE_ENV === "production" ? "/GardenPlanner/" : "/";
 
 export default defineConfig({
   base,
