@@ -36,11 +36,18 @@ export function SuggestPage() {
 
   if (!climate) {
     return (
-      <Pad>
-        Suggestions are site-specific — set a location on the{" "}
-        <Link to="/calendar" className="text-[var(--color-canopy)] underline">Calendar tab</Link>{" "}
-        first.
-      </Pad>
+      <section className="mx-auto max-w-3xl px-4 py-6">
+        <h1 className="mb-1 text-2xl font-bold">Plant Suggestions</h1>
+        <p className="mb-4 text-sm text-[var(--color-ink-soft)]">Personalized recommendations scored for your garden.</p>
+        <div className="rounded-xl border border-dashed border-[var(--color-paper-deep)] p-8 text-center">
+          <p className="font-medium text-[var(--color-ink-soft)]">Location needed</p>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            Suggestions are scored for your specific climate — set your location on the{" "}
+            <Link to="/calendar" className="font-medium text-[var(--color-canopy)] underline">Planting Calendar</Link>{" "}
+            page first.
+          </p>
+        </div>
+      </section>
     );
   }
 
@@ -57,27 +64,28 @@ export function SuggestPage() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-6">
-      <h1 className="mb-1 text-2xl font-bold">Suggest</h1>
-      <p className="mb-3 text-xs text-[var(--color-ink-soft)]">
-        Scored for {climate.location.label}
-        {climate.profile.hardinessZone ? ` (zone ${climate.profile.hardinessZone})` : ""} — season,
-        sun, space, water, companions, rotation, and your seed stash (§16).
+      <h1 className="mb-1 text-2xl font-bold">Plant Suggestions</h1>
+      <p className="mb-3 text-sm text-[var(--color-ink-soft)]">
+        Top recommendations scored for {climate.location.label}
+        {climate.profile.hardinessZone ? ` (zone ${climate.profile.hardinessZone})` : ""} based on
+        season timing, sun exposure, spacing, watering needs, companion planting, crop rotation, and
+        your seed stash.
       </p>
 
       <div className="mb-4 flex flex-wrap items-center gap-1.5 text-xs">
-        <Toggle on={!!prefs.easyOnly} onClick={() => setPrefs((p) => ({ ...p, easyOnly: !p.easyOnly }))}>easy crops only</Toggle>
-        <Toggle on={!!prefs.fastOnly} onClick={() => setPrefs((p) => ({ ...p, fastOnly: !p.fastOnly }))}>fast crops</Toggle>
-        <Toggle on={!!prefs.pollinatorFriendly} onClick={() => setPrefs((p) => ({ ...p, pollinatorFriendly: !p.pollinatorFriendly }))}>pollinator-friendly</Toggle>
+        <Toggle on={!!prefs.easyOnly} onClick={() => setPrefs((p) => ({ ...p, easyOnly: !p.easyOnly }))}>Easy Crops Only</Toggle>
+        <Toggle on={!!prefs.fastOnly} onClick={() => setPrefs((p) => ({ ...p, fastOnly: !p.fastOnly }))}>Fast Growers</Toggle>
+        <Toggle on={!!prefs.pollinatorFriendly} onClick={() => setPrefs((p) => ({ ...p, pollinatorFriendly: !p.pollinatorFriendly }))}>Pollinator-Friendly</Toggle>
         <label className="ml-auto font-medium">
-          Experience{" "}
+          Experience Level{" "}
           <select
             value={prefs.experience}
             onChange={(e) => setPrefs((p) => ({ ...p, experience: e.target.value as RecommendationPrefs["experience"] }))}
             className="rounded-lg border border-[var(--color-paper-deep)] bg-white/60 px-2 py-1 dark:bg-black/20"
           >
-            <option value="beginner">beginner</option>
-            <option value="intermediate">intermediate</option>
-            <option value="advanced">advanced</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
           </select>
         </label>
       </div>

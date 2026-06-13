@@ -39,11 +39,18 @@ export function PlantNextPage() {
 
   if (!climate) {
     return (
-      <Pad>
-        Set a location on the{" "}
-        <Link to="/calendar" className="text-[var(--color-canopy)] underline">Calendar tab</Link>{" "}
-        first — Plant Next needs frost dates to know what fits the season.
-      </Pad>
+      <section className="mx-auto max-w-3xl px-4 py-6">
+        <h1 className="mb-1 text-2xl font-bold">Plant Next</h1>
+        <p className="mb-4 text-sm text-[var(--color-ink-soft)]">What to plant right now based on your season.</p>
+        <div className="rounded-xl border border-dashed border-[var(--color-paper-deep)] p-8 text-center">
+          <p className="font-medium text-[var(--color-ink-soft)]">Location needed</p>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            Set your location on the{" "}
+            <Link to="/calendar" className="font-medium text-[var(--color-canopy)] underline">Planting Calendar</Link>{" "}
+            page first — we need your frost dates to know what fits the season.
+          </p>
+        </div>
+      </section>
     );
   }
 
@@ -73,11 +80,17 @@ export function PlantNextPage() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-6">
-      <h1 className="mb-4 text-2xl font-bold">Plant Next</h1>
+      <h1 className="mb-1 text-2xl font-bold">Plant Next</h1>
+      <p className="mb-4 text-sm text-[var(--color-ink-soft)]">
+        What's plantable right now, what's opening soon, and which beds are freeing up.
+      </p>
 
-      <h2 className="mb-2 font-semibold">Plantable now</h2>
+      <h2 className="mb-2 font-semibold">
+        Plantable Now
+        {openEntries.length > 0 && <span className="ml-1.5 text-sm font-normal text-[var(--color-ink-soft)]">({openEntries.length} plants)</span>}
+      </h2>
       {openEntries.length === 0 ? (
-        <Pad>Nothing opens today — check "opening soon."</Pad>
+        <Pad>No planting windows open today — check "Opening Soon" below.</Pad>
       ) : (
         <ul className="mb-5 space-y-1.5">
           {openEntries.map(({ plant, open }) => {
@@ -104,9 +117,12 @@ export function PlantNextPage() {
         </ul>
       )}
 
-      <h2 className="mb-2 font-semibold">Opening soon</h2>
+      <h2 className="mb-2 font-semibold">
+        Opening Soon
+        {soonEntries.length > 0 && <span className="ml-1.5 text-sm font-normal text-[var(--color-ink-soft)]">({soonEntries.length} plants)</span>}
+      </h2>
       {soonEntries.length === 0 ? (
-        <Pad>No windows opening in the next 5 weeks.</Pad>
+        <Pad>No planting windows opening in the next 5 weeks.</Pad>
       ) : (
         <ul className="mb-5 flex flex-wrap gap-1.5">
           {soonEntries.map(({ plant, soonestIn, soonest }) => (
@@ -122,7 +138,10 @@ export function PlantNextPage() {
         </ul>
       )}
 
-      <h2 className="mb-2 font-semibold">Beds freeing up</h2>
+      <h2 className="mb-2 font-semibold">
+        Beds Freeing Up
+        {handoffs.length > 0 && <span className="ml-1.5 text-sm font-normal text-[var(--color-ink-soft)]">({handoffs.length})</span>}
+      </h2>
       {handoffs.length === 0 ? (
         <Pad>No active plantings finish in the next four weeks.</Pad>
       ) : (
@@ -205,10 +224,10 @@ function SuccessionForm({
 
   return (
     <div className="rounded-xl border border-[var(--color-paper-deep)] bg-white/40 p-3 dark:bg-white/5">
-      <h2 className="mb-1 font-semibold">Succession scheduler</h2>
+      <h2 className="mb-1 font-semibold">Succession Planner</h2>
       <p className="mb-3 text-xs text-[var(--color-ink-soft)]">
-        Repeated sowings of a fast crop, spread out for a steady harvest (§15).
-        Each sowing lands as a ghost on the grid plus a dated sow task.
+        Schedule repeated sowings of a fast crop, spread over time for a steady harvest.
+        Each sowing will appear in your garden layout and create a dated task.
       </p>
       <form
         className="flex flex-wrap items-end gap-2 text-xs"
