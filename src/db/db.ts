@@ -55,6 +55,13 @@ export interface BlobRecord {
   createdAt: string;
 }
 
+/** Custom sprite palette overrides, keyed by plant iconKey. */
+export interface SpriteOverride {
+  iconKey: string;
+  palette: Record<string, string>; // partial palette: { f: "#...", l: "#...", ... }
+  isRoot: boolean;
+}
+
 /** Timestamped adapter cache entries (§8.3, §23 `caches`). */
 export interface CacheRecord {
   key: string; // e.g. "weather:forecast:<lat>,<lon>"
@@ -89,6 +96,7 @@ export class PlotDB extends Dexie {
   climateProfiles!: EntityTable<ClimateProfile, "id">;
   settings!: EntityTable<SettingsRecord, "id">;
   caches!: EntityTable<CacheRecord, "key">;
+  spriteOverrides!: EntityTable<SpriteOverride, "iconKey">;
 
   constructor() {
     super("plot");
@@ -116,6 +124,9 @@ export class PlotDB extends Dexie {
       climateProfiles: "id, locationId",
       settings: "id",
       caches: "key",
+    });
+    this.version(3).stores({
+      spriteOverrides: "iconKey",
     });
   }
 }
