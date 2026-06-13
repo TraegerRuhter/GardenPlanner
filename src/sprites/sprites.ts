@@ -40,6 +40,17 @@ const CATEGORY_PALETTES: Record<PlantCategory, Palette> = {
   tree: { ...BASE, l: "#3f8f4f", L: "#2f6f3e", f: "#c94f4f", F: "#a03a3a" },
 };
 
+/** Dynamic accents registered at runtime for API-imported plants. */
+const DYNAMIC_ACCENTS = new Map<string, Partial<Palette>>();
+
+export function registerDynamicAccent(iconKey: string, accent: Partial<Palette>) {
+  DYNAMIC_ACCENTS.set(iconKey, accent);
+  // Invalidate cached sprites for this iconKey so they re-render.
+  for (const k of cache.keys()) {
+    if (k.startsWith(`${iconKey}/`)) cache.delete(k);
+  }
+}
+
 /** Per-plant accent colors, keyed by iconKey (sprite-layer data, not catalog). */
 const ACCENTS: Record<string, { f: string; F: string }> = {
   tomato: { f: "#d23c2e", F: "#a02a20" },
@@ -75,7 +86,8 @@ function mapFor(iconKey: string, stage: StageKey): PixelMap {
 function paletteFor(iconKey: string, category: PlantCategory): Palette {
   const base = CATEGORY_PALETTES[category];
   const accent = ACCENTS[iconKey];
-  return accent ? { ...base, ...accent } : base;
+  const dynamic = DYNAMIC_ACCENTS.get(iconKey);
+  return { ...base, ...accent, ...dynamic };
 }
 
 /** Render (and cache) the sprite for a plant at a stage as a data URL. */

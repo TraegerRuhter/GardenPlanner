@@ -481,6 +481,7 @@ export interface Settings {
     ambientWeather: boolean; // default true on high tier, off on low/field
     placementJuice: boolean; // dirt puff / snap / pop animations; default true
   };
+  perenualApiKey?: string;
 }
 
 // ---------------------------------------------------------------------------

@@ -10,7 +10,9 @@ import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../../db/db";
 import type { Difficulty, Plant } from "../../types/models";
+import { useAppStore } from "../../store/appStore";
 import { SpriteImg } from "../../components/SpriteImg";
+import { PlantSearchModal } from "../../components/PlantSearchModal";
 import { Badge } from "../../components/Badge";
 import { badgeTone } from "../../components/badgeTone";
 
@@ -45,10 +47,12 @@ function matches(p: Plant, f: FilterKey): boolean {
 }
 
 export function EncyclopediaPage() {
-  const plants = useLiveQuery(() => db.catalog_plants.toArray(), []);
+  const plants = useLiveQuery(() => db.catalog_plants.toArray());
   const [search, setSearch] = useState("");
   const [active, setActive] = useState<Set<FilterKey>>(new Set());
   const [sort, setSort] = useState<SortKey>("name");
+  const [showSearch, setShowSearch] = useState(false);
+  const apiKey = useAppStore((s) => s.settings.perenualApiKey);
 
   const shown = useMemo(() => {
     if (!plants) return [];
@@ -85,7 +89,26 @@ export function EncyclopediaPage() {
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-6">
-      <h1 className="mb-4 text-2xl font-bold">Encyclopedia</h1>
+      <div className="mb-4 flex items-center gap-3">
+        <h1 className="text-2xl font-bold">Encyclopedia</h1>
+        {apiKey && (
+          <button
+            type="button"
+            onClick={() => setShowSearch(true)}
+            className="rounded-lg bg-[var(--color-canopy)] px-3 py-1.5 text-xs font-medium text-white"
+          >
+            + Search online
+          </button>
+        )}
+      </div>
+
+      {showSearch && apiKey && (
+        <PlantSearchModal
+          apiKey={apiKey}
+          onClose={() => setShowSearch(false)}
+          onImported={() => {}}
+        />
+      )}
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input
