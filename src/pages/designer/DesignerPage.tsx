@@ -321,12 +321,6 @@ function DesignerBody({
                 if (a) a.origin = { x: Math.round(x), y: Math.round(y) };
               })
             }
-            onAreaRotate={(areaId, deg) =>
-              void mutateGarden((g) => {
-                const a = g.areas.find((ar) => ar.id === areaId);
-                if (a) a.rotationDeg = deg;
-              })
-            }
             height={460}
           />
 

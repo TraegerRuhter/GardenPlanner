@@ -5,8 +5,8 @@
  * area's title bar to reposition it on the canvas (satellites, §12.2).
  */
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Group, Image as KImage, Layer, Rect, Stage, Text, Circle, Line } from "react-konva";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Group, Image as KImage, Layer, Rect, Stage, Text } from "react-konva";
 import type Konva from "konva";
 import type { Garden, GardenArea, Plant, PlantInstance, Tile } from "../../types/models";
 import type { SunMap } from "../../engines/sunModel";
@@ -22,7 +22,6 @@ export interface CanvasProps {
   selected: { areaId: string; col: number; row: number } | null;
   onTileTap: (areaId: string, col: number, row: number) => void;
   onAreaMove: (areaId: string, x: number, y: number) => void;
-  onAreaRotate: (areaId: string, deg: number) => void;
   height: number;
 }
 
@@ -34,7 +33,6 @@ export function GardenCanvas({
   selected,
   onTileTap,
   onAreaMove,
-  onAreaRotate,
   height,
 }: CanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
@@ -92,7 +90,6 @@ export function GardenCanvas({
               selected={selected?.areaId === area.id ? selected : null}
               onTileTap={onTileTap}
               onAreaMove={onAreaMove}
-              onAreaRotate={onAreaRotate}
             />
           ))}
         </Layer>
@@ -124,7 +121,6 @@ function AreaGroup({
   selected,
   onTileTap,
   onAreaMove,
-  onAreaRotate,
 }: {
   area: GardenArea;
   instancesById: Map<string, PlantInstance>;
@@ -133,7 +129,6 @@ function AreaGroup({
   selected: { col: number; row: number } | null;
   onTileTap: (areaId: string, col: number, row: number) => void;
   onAreaMove: (areaId: string, x: number, y: number) => void;
-  onAreaRotate: (areaId: string, deg: number) => void;
 }) {
   const tiles = useMemo(() => {
     const m = new Map<string, Tile>();
@@ -180,62 +175,6 @@ function AreaGroup({
       {/* bed backdrop */}
       <Rect x={-3} y={-3} width={w + 6} height={h + 6} fill="#6e5238" cornerRadius={6} />
       {cells}
-      {/* rotation handle */}
-      <RotationHandle
-        areaW={w}
-        areaH={h}
-        currentDeg={area.rotationDeg}
-        onRotate={(deg) => onAreaRotate(area.id, deg)}
-      />
-    </Group>
-  );
-}
-
-function RotationHandle({
-  areaW,
-  areaH,
-  currentDeg,
-  onRotate,
-}: {
-  areaW: number;
-  areaH: number;
-  currentDeg: number;
-  onRotate: (deg: number) => void;
-}) {
-  const cx = areaW / 2;
-  const cy = areaH / 2;
-  const armLen = Math.max(areaW, areaH) / 2 + 20;
-  const rad = (currentDeg * Math.PI) / 180;
-  const hx = cx + Math.sin(rad) * armLen;
-  const hy = cy - Math.cos(rad) * armLen;
-
-  const onDrag = useCallback(
-    (e: Konva.KonvaEventObject<DragEvent>) => {
-      const node = e.target;
-      const dx = node.x() - cx;
-      const dy = node.y() - cy;
-      const angle = Math.round((Math.atan2(dx, -dy) * 180) / Math.PI);
-      onRotate(angle);
-      node.position({ x: hx, y: hy });
-    },
-    [cx, cy, hx, hy, onRotate],
-  );
-
-  return (
-    <Group>
-      <Line points={[cx, cy, hx, hy]} stroke="rgba(255,255,255,0.4)" strokeWidth={1.5} dash={[4, 3]} listening={false} />
-      <Circle
-        x={hx}
-        y={hy}
-        radius={8}
-        fill="rgba(47,111,62,0.9)"
-        stroke="#fff"
-        strokeWidth={2}
-        draggable
-        onDragMove={onDrag}
-        onMouseEnter={(e) => { e.target.getStage()!.container().style.cursor = "grab"; }}
-        onMouseLeave={(e) => { e.target.getStage()!.container().style.cursor = "default"; }}
-      />
     </Group>
   );
 }

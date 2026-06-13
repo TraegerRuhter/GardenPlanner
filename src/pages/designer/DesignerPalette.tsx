@@ -77,38 +77,40 @@ interface PanelDef {
 }
 
 export function CanvasToolbar({ tool, setTool }: { tool: Tool; setTool: (t: Tool) => void }) {
-  const tools: { t: Tool; label: string; icon: string }[] = [
-    { t: { t: "select" }, label: "Select", icon: "👆" },
-    { t: { t: "erase" }, label: "Erase", icon: "🧹" },
-    { t: { t: "elev_up" }, label: "+5 cm", icon: "⬆" },
-    { t: { t: "elev_down" }, label: "−5 cm", icon: "⬇" },
+  const tools: { t: Tool; label: string; icon: string; title: string }[] = [
+    { t: { t: "select" }, label: "Select", icon: "👆", title: "Select a tile" },
+    { t: { t: "erase" }, label: "Erase", icon: "🧹", title: "Erase a tile" },
+    { t: { t: "elev_up" }, label: "Raise", icon: "⬆", title: "Raise tile +5 cm" },
+    { t: { t: "elev_down" }, label: "Lower", icon: "⬇", title: "Lower tile −5 cm" },
   ];
 
   return (
-    <div
-      className="mb-2 flex items-center gap-1 rounded-xl border border-[var(--color-paper-deep)] bg-white/60 p-1 backdrop-blur-sm dark:bg-black/40"
-      role="toolbar"
-      aria-label="Tile tools"
-    >
-      {tools.map((item) => {
-        const active = tool.t === item.t.t;
-        return (
-          <button
-            key={item.t.t}
-            type="button"
-            aria-pressed={active}
-            onClick={() => setTool(item.t)}
-            title={item.label}
-            className={`rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
-              active
-                ? "bg-[var(--color-canopy)] text-white"
-                : "hover:bg-[var(--color-paper-deep)]/60"
-            }`}
-          >
-            {item.icon} {item.label}
-          </button>
-        );
-      })}
+    <div className="mb-2 flex justify-center">
+      <div
+        role="toolbar"
+        aria-label="Tile tools"
+        className="inline-flex items-center gap-1 rounded-xl bg-[var(--color-ink)]/85 p-1 shadow-md ring-1 ring-black/20 backdrop-blur"
+      >
+        {tools.map((item) => {
+          const active = tool.t === item.t.t;
+          return (
+            <button
+              key={item.t.t}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setTool(item.t)}
+              title={item.title}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+                active
+                  ? "bg-[var(--color-canopy)] text-white"
+                  : "text-[var(--color-paper)] hover:bg-white/15"
+              }`}
+            >
+              {item.icon} {item.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
