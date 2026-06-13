@@ -100,7 +100,7 @@ export function LocationSetup({ onDone }: { onDone: () => void }) {
         <h2 className="mb-1 font-semibold">Where is this garden?</h2>
         <p className="text-sm text-[var(--color-ink-soft)]">
           Your location stays on this device and is only used to derive frost
-          dates, climate normals, and a hardiness zone (spec §26).
+          dates, climate normals, and a hardiness zone.
         </p>
       </div>
 
