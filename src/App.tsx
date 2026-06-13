@@ -46,7 +46,7 @@ export default function App() {
   }
 
   // Strip the trailing slash off Vite's BASE_URL so the router basename is
-  // "/pandas-challenge" on Pages and "/" locally.
+  // "/GardenPlanner" on Pages and "/" locally.
   const basename = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
 
   return (
