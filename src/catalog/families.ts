@@ -63,4 +63,22 @@ export const families: PlantFamily[] = [
     rotationGroup: "leafy",
     notes: "Basil, mint, thyme, rosemary. Aromatic; mostly pest-deterrent.",
   },
+  {
+    id: "poaceae",
+    commonName: "Grass family",
+    rotationGroup: "fruiting",
+    notes: "Corn and grains. Heavy nitrogen feeders; wind-pollinated, so plant in blocks.",
+  },
+  {
+    id: "malvaceae",
+    commonName: "Mallow family",
+    rotationGroup: "fruiting",
+    notes: "Okra and relatives. Heat-loving; share root-knot nematode with solanums.",
+  },
+  {
+    id: "convolvulaceae",
+    commonName: "Morning-glory family",
+    rotationGroup: "root",
+    notes: "Sweet potato. Tender vining tubers; grown from slips in warm soil.",
+  },
 ];
