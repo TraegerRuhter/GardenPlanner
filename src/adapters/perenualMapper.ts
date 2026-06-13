@@ -15,7 +15,8 @@ import type {
   PlantingMethod,
   SunRequirement,
 } from "../types/models";
-import { registerDynamicAccent } from "../sprites/sprites";
+import { registerDynamicAccent, setPlantShape } from "../sprites/sprites";
+import type { SpriteShape } from "../sprites/maps";
 
 const COLOR_MAP: Record<string, string> = {
   red: "#d23c2e",
@@ -156,6 +157,25 @@ function mapFamily(family: string | null): string {
   return KNOWN_FAMILIES[key] ?? key;
 }
 
+function inferShape(type: string, category: PlantCategory, detail: PerenualPlantDetail): SpriteShape {
+  const t = type.toLowerCase();
+  if (t.includes("grass") || t.includes("grain")) return "grass";
+  if (t.includes("climber") || t.includes("vine") || t.includes("climbing")) return "climbing";
+  if (t.includes("bulb")) return "bulb";
+  if (category === "herb") return "herb";
+  if (category === "flower") return "flower";
+  if (category === "tree" || category === "shrub") return "tall";
+  if (detail.edible_leaf && !detail.edible_fruit) return "leafy";
+  const name = detail.common_name.toLowerCase();
+  if (name.includes("carrot") || name.includes("radish") || name.includes("beet") || name.includes("turnip") || name.includes("parsnip")) return "root";
+  if (name.includes("onion") || name.includes("garlic") || name.includes("shallot")) return "bulb";
+  if (name.includes("cucumber") || name.includes("squash") || name.includes("melon") || name.includes("pumpkin") || name.includes("zucchini")) return "vine";
+  if (name.includes("pea") || name.includes("bean") && name.includes("pole")) return "climbing";
+  if (name.includes("corn") || name.includes("sunflower")) return "tall";
+  if (name.includes("lettuce") || name.includes("spinach") || name.includes("chard") || name.includes("kale")) return "leafy";
+  return "bush";
+}
+
 function makeId(name: string): string {
   return name
     .toLowerCase()
@@ -190,6 +210,9 @@ export function mapPerenualToPlant(detail: PerenualPlantDetail): Plant {
       ...(leafColor && leafColor !== "#3f8f4f" ? { l: leafColor, L: darken(leafColor) } : {}),
     });
   }
+
+  const spriteShape = inferShape(detail.type, category, detail);
+  setPlantShape(iconKey, spriteShape);
 
   const heightCm = detail.dimensions
     ? { min: Math.round(detail.dimensions.min_value * (detail.dimensions.unit === "feet" ? 30.48 : 1)),

@@ -60,6 +60,7 @@ export interface SpriteOverride {
   iconKey: string;
   palette: Record<string, string>; // partial palette: { f: "#...", l: "#...", ... }
   isRoot: boolean;
+  shape?: string; // SpriteShape — stored as string for DB flexibility
 }
 
 /** Timestamped adapter cache entries (§8.3, §23 `caches`). */
