@@ -111,6 +111,25 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
   fennel: { f: "#d9c24a", F: "#b09c2e" },
   chervil: { f: "#e8ecd0", F: "#c4c8ac" },
   lovage: { f: "#b6c24a", F: "#92a02e" },
+  // tranche 5
+  sweet_corn: { f: "#e8c84a", F: "#c2a52e" },
+  okra: { f: "#7faa48", F: "#5e8634" },
+  sweet_potato: { f: "#c87a3f", F: "#a05c2a" },
+  cowpea: { f: "#cdbf8a", F: "#a89a64" },
+  chickpea: { f: "#d2c08a", F: "#ad9a64" },
+  kohlrabi: { f: "#a8c060", F: "#84a040" },
+  rutabaga: { f: "#b48a6a", F: "#8e6648" },
+  daikon: { f: "#eef0e2", F: "#cccebe" },
+  napa_cabbage: { f: "#cdd89a", F: "#a8b478" },
+  mizuna: { f: "#6aa84a", F: "#4f8a34" },
+  tatsoi: { f: "#3a7d4a", F: "#2a5c36" },
+  celeriac: { f: "#d8c8a0", F: "#b4a47c" },
+  endive: { f: "#9bbf5a", F: "#79993e" },
+  radicchio: { f: "#a83048", F: "#821f34" },
+  sunchoke: { f: "#c9a86a", F: "#a4844a" },
+  ground_cherry: { f: "#e8c24a", F: "#c29c2e" },
+  gourd: { f: "#9aa84a", F: "#76842e" },
+  amaranth: { f: "#c0305a", F: "#981f44" },
 };
 
 /** Per-plant sprite shape overrides. */
@@ -174,6 +193,25 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   fennel: "herb",
   chervil: "herb",
   lovage: "tall",
+  // tranche 5
+  sweet_corn: "tall",
+  okra: "tall",
+  sweet_potato: "root",
+  cowpea: "bush",
+  chickpea: "bush",
+  kohlrabi: "bulb",
+  rutabaga: "root",
+  daikon: "root",
+  napa_cabbage: "leafy",
+  mizuna: "leafy",
+  tatsoi: "leafy",
+  celeriac: "root",
+  endive: "leafy",
+  radicchio: "leafy",
+  sunchoke: "root",
+  ground_cherry: "bush",
+  gourd: "vine",
+  amaranth: "leafy",
 };
 
 export function setPlantShape(iconKey: string, shape: SpriteShape) {
