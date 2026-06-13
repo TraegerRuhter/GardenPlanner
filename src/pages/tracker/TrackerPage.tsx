@@ -55,29 +55,39 @@ export function TrackerPage() {
 
   if (instances.length === 0) {
     return (
-      <Pad>
-        Nothing growing yet — place plants in the{" "}
-        <Link to="/designer" className="text-[var(--color-canopy)] underline">
-          Designer
-        </Link>{" "}
-        and log their planting dates.
-      </Pad>
+      <section className="mx-auto max-w-3xl px-4 py-6">
+        <h1 className="mb-1 text-2xl font-bold">Growth Tracker</h1>
+        <div className="mt-6 rounded-xl border border-dashed border-[var(--color-paper-deep)] p-8 text-center">
+          <p className="text-lg font-medium text-[var(--color-ink-soft)]">Nothing growing yet</p>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            Place plants in the{" "}
+            <Link to="/designer" className="font-medium text-[var(--color-canopy)] underline">
+              Garden Designer
+            </Link>{" "}
+            and log their planting dates to start tracking growth.
+          </p>
+        </div>
+      </section>
     );
   }
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-6">
-      <div className="mb-4 flex items-center gap-3">
-        <h1 className="text-2xl font-bold">Tracker</h1>
+      <div className="mb-1 flex items-center gap-3">
+        <h1 className="text-2xl font-bold">Growth Tracker</h1>
         <button
           type="button"
           onClick={() => void runDailyPass().then(() => setRefresh((n) => n + 1))}
-          className="rounded-lg bg-[var(--color-paper-deep)] px-2 py-1 text-xs font-medium"
-          title="Re-run the daily stage pass now"
+          className="rounded-lg bg-[var(--color-paper-deep)] px-2.5 py-1.5 text-xs font-medium hover:opacity-80"
+          title="Re-check projected stage dates based on today's date"
         >
-          ↻ Update stages
+          ↻ Refresh Stages
         </button>
       </div>
+      <p className="mb-4 text-sm text-[var(--color-ink-soft)]">
+        {active.length} active plant{active.length !== 1 ? "s" : ""}
+        {planned.length > 0 ? ` · ${planned.length} planned` : ""}
+      </p>
 
       {diagnosing && (
         <DiagnosticDialog
@@ -117,16 +127,22 @@ export function TrackerPage() {
 
       {planned.length > 0 && (
         <>
-          <h2 className="mt-6 mb-2 font-semibold text-[var(--color-ink-soft)]">
-            Planned (ghosts on the grid — log planting in the Designer)
+          <h2 className="mt-6 mb-1 font-semibold">
+            Planned Plantings
           </h2>
-          <ul className="space-y-1 text-sm">
+          <p className="mb-2 text-xs text-[var(--color-ink-soft)]">
+            These plants are placed in the garden but not yet planted. Log their planting date in the Designer to start tracking.
+          </p>
+          <ul className="space-y-1.5 text-sm">
             {planned.map((inst) => {
               const plant = plantById.get(inst.plantId);
               return plant ? (
-                <li key={inst.id} className="flex items-center gap-2 rounded-lg border border-dashed border-[var(--color-paper-deep)] p-2">
-                  <SpriteImg plant={plant} stage="planted" size={28} />
-                  {plant.commonName} · {gardenName.get(inst.gardenId)} · intended {formatShort(inst.plantedOn)}
+                <li key={inst.id} className="flex items-center gap-2 rounded-lg border border-dashed border-[var(--color-paper-deep)] bg-white/30 p-2.5 dark:bg-white/5">
+                  <SpriteImg plant={plant} stage="planted" size={32} />
+                  <div className="min-w-0 flex-1">
+                    <span className="font-medium">{plant.commonName}</span>
+                    <span className="text-[var(--color-ink-soft)]"> · {gardenName.get(inst.gardenId)} · target date: {formatShort(inst.plantedOn)}</span>
+                  </div>
                 </li>
               ) : null;
             })}
@@ -191,18 +207,18 @@ function InstanceCard({
       </div>
 
       <div className="mt-2 flex flex-wrap gap-1.5">
-        <CardBtn onClick={() => void onMove("advance")} title="It really is ahead of the projection">
-          ⬆ Advance
+        <CardBtn onClick={() => void onMove("advance")} title="Manually advance to the next growth stage">
+          ⬆ Advance Stage
         </CardBtn>
-        <CardBtn onClick={() => void onMove("rollback")} title="It looks behind — roll back and diagnose (§13.4)">
-          ⬇ Roll back & diagnose
+        <CardBtn onClick={() => void onMove("rollback")} title="Roll back to previous stage and diagnose issues">
+          ⬇ Diagnose Issue
         </CardBtn>
         {harvestReady && (
-          <CardBtn onClick={() => setHarvestOpen((v) => !v)}>🧺 Log harvest</CardBtn>
+          <CardBtn onClick={() => setHarvestOpen((v) => !v)}>🧺 Log Harvest</CardBtn>
         )}
-        <CardBtn onClick={() => setJournalOpen((v) => !v)}>📓 Journal</CardBtn>
-        <CardBtn onClick={() => void setInstanceStatus(inst.id, "harvested")}>✓ Done</CardBtn>
-        <CardBtn onClick={() => void setInstanceStatus(inst.id, "failed")}>✗ Failed</CardBtn>
+        <CardBtn onClick={() => setJournalOpen((v) => !v)}>📓 Add Note</CardBtn>
+        <CardBtn onClick={() => void setInstanceStatus(inst.id, "harvested")}>✓ Mark Done</CardBtn>
+        <CardBtn onClick={() => void setInstanceStatus(inst.id, "failed")}>✗ Mark Failed</CardBtn>
       </div>
 
       {journalOpen && <JournalPanel instance={inst} />}

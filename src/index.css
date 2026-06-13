@@ -15,6 +15,7 @@
   --color-leaf: #58a854; /* accent green */
   --color-soil: #5c4033; /* earth accents */
   --color-warn: #b3541e; /* non-blocking warnings (§12.6) */
+  --color-success: #2a8a4a; /* confirmation greens */
 }
 
 html {
@@ -31,6 +32,7 @@ html[data-theme="dark"] {
   --color-leaf: #6fbf63;
   --color-soil: #9a7a5f;
   --color-warn: #e07a3e;
+  --color-success: #5cc070;
 }
 
 body {
@@ -49,4 +51,30 @@ body {
 /* §21.4: the pixel layer (plot sprites) must scale crisply */
 .pixel-art {
   image-rendering: pixelated;
+}
+
+/* Smooth transitions for interactive elements */
+button, a, input, select {
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Smooth scroll for the whole app */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better focus rings */
+:focus-visible {
+  outline: 2px solid var(--color-canopy);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

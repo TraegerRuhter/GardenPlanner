@@ -37,36 +37,49 @@ export function TasksPage() {
 
   return (
     <section className="mx-auto max-w-2xl px-4 py-6">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-bold">Tasks</h1>
+      <div className="mb-1 flex flex-wrap items-center gap-2">
+        <h1 className="text-2xl font-bold">Care Tasks</h1>
         <button
           type="button"
           onClick={() => void runCarePass().then(() => setRefresh((n) => n + 1))}
-          className="rounded-lg bg-[var(--color-paper-deep)] px-2 py-1 text-xs font-medium"
-          title="Re-check watering deficits and feeds now"
+          className="rounded-lg bg-[var(--color-paper-deep)] px-2.5 py-1.5 text-xs font-medium hover:opacity-80"
+          title="Re-calculate watering, feeding, and other care needs"
         >
-          ↻ Check care now
+          ↻ Refresh Care Schedule
         </button>
         <button
           type="button"
           aria-pressed={showDone}
           onClick={() => setShowDone((v) => !v)}
-          className="ml-auto rounded-lg bg-[var(--color-paper-deep)] px-2 py-1 text-xs font-medium"
+          className="ml-auto rounded-lg bg-[var(--color-paper-deep)] px-2.5 py-1.5 text-xs font-medium hover:opacity-80"
         >
-          {showDone ? "Hide" : "Show"} done
+          {showDone ? "Hide completed" : "Show completed"}
         </button>
       </div>
+      <p className="mb-4 text-sm text-[var(--color-ink-soft)]">
+        {open.length === 0
+          ? "All caught up — no pending tasks"
+          : `${open.length} task${open.length !== 1 ? "s" : ""} pending${overdue.length > 0 ? ` · ${overdue.length} overdue` : ""}`}
+      </p>
 
       <AddTaskForm />
 
-      {open.length === 0 && <Pad>All clear — nothing due. 🌞</Pad>}
-      <TaskGroup title={`Overdue (${overdue.length})`} tone="overdue" tasks={overdue} today={today} />
-      <TaskGroup title={`Today (${dueToday.length})`} tone="today" tasks={dueToday} today={today} />
-      <TaskGroup title={`Upcoming (${upcoming.length})`} tone="later" tasks={upcoming} today={today} />
+      {open.length === 0 && (
+        <div className="mt-4 rounded-xl border border-dashed border-[var(--color-paper-deep)] p-8 text-center">
+          <p className="text-lg">🌞</p>
+          <p className="mt-1 font-medium text-[var(--color-ink-soft)]">All clear — nothing due!</p>
+          <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
+            Care tasks are automatically generated based on your active plants.
+          </p>
+        </div>
+      )}
+      <TaskGroup title={`⚠ Overdue — ${overdue.length} task${overdue.length !== 1 ? "s" : ""}`} tone="overdue" tasks={overdue} today={today} />
+      <TaskGroup title={`Today — ${dueToday.length} task${dueToday.length !== 1 ? "s" : ""}`} tone="today" tasks={dueToday} today={today} />
+      <TaskGroup title={`Coming Up — ${upcoming.length} task${upcoming.length !== 1 ? "s" : ""}`} tone="later" tasks={upcoming} today={today} />
 
       {showDone && done.length > 0 && (
         <>
-          <h2 className="mt-5 mb-1 text-sm font-semibold text-[var(--color-ink-soft)]">Recently done</h2>
+          <h2 className="mt-5 mb-1 text-sm font-semibold text-[var(--color-ink-soft)]">Recently Completed (last 15)</h2>
           <ul className="space-y-1 opacity-60">
             {done.map((t) => (
               <li key={t.id} className="rounded-lg border border-[var(--color-paper-deep)] p-2 text-sm line-through">
