@@ -7,18 +7,20 @@
 interface StubPageProps {
   title: string;
   purpose: string;
-  specRef: string;
-  phase: number;
+  specRef?: string;
+  phase?: number;
 }
 
-export function StubPage({ title, purpose, specRef, phase }: StubPageProps) {
+export function StubPage({ title, purpose, phase }: StubPageProps) {
   return (
     <section className="mx-auto flex max-w-xl flex-col gap-3 px-6 py-10">
       <h1 className="text-2xl font-bold text-[var(--color-ink)]">{title}</h1>
       <p className="text-[var(--color-ink-soft)]">{purpose}</p>
-      <p className="text-sm text-[var(--color-ink-soft)]">
-        Spec {specRef} · arrives in Phase {phase}
-      </p>
+      {phase != null && (
+        <p className="text-sm text-[var(--color-ink-soft)]">
+          Coming in Phase {phase}
+        </p>
+      )}
     </section>
   );
 }

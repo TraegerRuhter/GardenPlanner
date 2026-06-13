@@ -27,8 +27,11 @@ export function MirrorTable({
   const area = garden.areas.find((a) => a.id === areaId) ?? garden.areas[0];
 
   return (
-    <section aria-label="Placed objects (accessible mirror)" className="mt-4 rounded-xl border border-[var(--color-paper-deep)] bg-white/40 p-3 text-sm dark:bg-white/5">
-      <h2 className="mb-2 font-semibold">Placed objects</h2>
+    <section aria-label="Placed objects table view" className="mt-4 rounded-xl border border-[var(--color-paper-deep)] bg-white/40 p-3 text-sm dark:bg-white/5">
+      <h2 className="mb-0.5 font-semibold">Placed Objects</h2>
+      <p className="mb-2 text-xs text-[var(--color-ink-soft)]">
+        Keyboard-accessible view of all placed items. Use the form below to place items by coordinates.
+      </p>
 
       <form
         className="mb-3 flex flex-wrap items-end gap-2"
@@ -59,7 +62,7 @@ export function MirrorTable({
       </form>
 
       {rows.length === 0 ? (
-        <p className="text-[var(--color-ink-soft)]">Nothing placed yet.</p>
+        <p className="text-[var(--color-ink-soft)]">No items placed yet. Use the canvas or the coordinate form above to place plants and objects.</p>
       ) : (
         <div className="max-h-64 overflow-y-auto">
           <table className="w-full border-collapse text-left text-xs">
