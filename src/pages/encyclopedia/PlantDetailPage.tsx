@@ -12,6 +12,7 @@ import type { Plant } from "../../types/models";
 import { useAppStore } from "../../store/appStore";
 import { formatDepthMm, formatLength, formatRange, formatTemp } from "../../lib/units";
 import { SpriteImg } from "../../components/SpriteImg";
+import { SpriteCustomizer } from "../../components/SpriteCustomizer";
 import { Badge } from "../../components/Badge";
 import { badgeTone } from "../../components/badgeTone";
 import { getActiveClimate } from "../../db/climateRepo";
@@ -24,6 +25,7 @@ type Tab = (typeof TABS)[number];
 export function PlantDetailPage() {
   const { plantId } = useParams<{ plantId: string }>();
   const [tab, setTab] = useState<Tab>("Overview");
+  const [showCustomizer, setShowCustomizer] = useState(false);
   const units = useAppStore((s) => s.settings.unitSystem);
 
   const data = useLiveQuery(async () => {
@@ -67,7 +69,20 @@ export function PlantDetailPage() {
       </Link>
 
       <header className="mt-2 mb-4 flex items-center gap-4">
-        <SpriteImg plant={plant} stage="harvest" size={80} />
+        <button
+          type="button"
+          onClick={() => setShowCustomizer(true)}
+          title="Customize sprite"
+          className="group relative shrink-0 cursor-pointer rounded-xl p-1 hover:bg-[var(--color-paper-deep)]"
+        >
+          <SpriteImg plant={plant} stage="harvest" size={80} />
+          <span className="absolute inset-x-0 bottom-0 rounded-b-xl bg-black/50 py-0.5 text-center text-[9px] font-medium text-white opacity-0 group-hover:opacity-100">
+            edit
+          </span>
+        </button>
+        {showCustomizer && (
+          <SpriteCustomizer plant={plant} onClose={() => setShowCustomizer(false)} />
+        )}
         <div>
           <h1 className="text-2xl font-bold leading-tight">{plant.commonName}</h1>
           <p className="text-sm italic text-[var(--color-ink-soft)]">

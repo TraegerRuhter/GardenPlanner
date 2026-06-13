@@ -20,6 +20,8 @@ interface Palette {
   w: string;
 }
 
+export type { Palette as SpritePalette };
+
 const BASE: Omit<Palette, "f" | "F"> = {
   m: "#7d5c46",
   M: "#5c4033",
@@ -72,6 +74,22 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
 
 /** iconKeys that render the root-crop yield maps for sizing/harvest. */
 const ROOT_ICONS = new Set(["carrot", "radish", "beet", "onion_bulb"]);
+
+export function setRootIcon(iconKey: string, isRoot: boolean) {
+  if (isRoot) ROOT_ICONS.add(iconKey);
+  else ROOT_ICONS.delete(iconKey);
+  for (const k of cache.keys()) {
+    if (k.startsWith(`${iconKey}/`)) cache.delete(k);
+  }
+}
+
+export function isRootIcon(iconKey: string): boolean {
+  return ROOT_ICONS.has(iconKey);
+}
+
+export function resolvedPalette(iconKey: string, category: PlantCategory): Palette {
+  return paletteFor(iconKey, category);
+}
 
 const cache = new Map<string, string>();
 

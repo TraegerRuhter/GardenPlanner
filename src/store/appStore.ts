@@ -12,6 +12,7 @@ import { create } from "zustand";
 import type { Settings } from "../types/models";
 import { db, SETTINGS_ID } from "../db/db";
 import { seedCatalogIfNeeded } from "../db/seed";
+import { registerDynamicAccent, setRootIcon } from "../sprites/sprites";
 
 /** Spec-mandated defaults: §7.12 and §32.7. */
 export const defaultSettings: Settings = {
@@ -56,6 +57,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
   init: async () => {
     try {
       await seedCatalogIfNeeded(db);
+      // Restore custom sprite palettes from DB.
+      const overrides = await db.spriteOverrides.toArray();
+      for (const o of overrides) {
+        registerDynamicAccent(o.iconKey, o.palette);
+        if (o.isRoot) setRootIcon(o.iconKey, true);
+      }
       const stored = await db.settings.get(SETTINGS_ID);
       if (stored) {
         const { id, ...rest } = stored;
