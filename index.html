@@ -14,6 +14,13 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // SPA redirect: restore path from 404.html query-string redirect.
+      (function () {
+        var p = new URLSearchParams(location.search).get('p');
+        if (p) history.replaceState(null, '', p);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
