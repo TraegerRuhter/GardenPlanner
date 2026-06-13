@@ -92,8 +92,8 @@ export class PlotDB extends Dexie {
 
   constructor() {
     super("plot");
-    this.version(1).stores({
-      catalog_plants: "id, familyId, category",
+    this.version(2).stores({
+      catalog_plants: "id, familyId, category, commonName",
       catalog_varietals: "id, plantId",
       catalog_recipes: "id, *plantIds",
       catalog_stageTemplates: "id",
