@@ -23,10 +23,10 @@ const KIND_COLOR: Record<BandKind, string> = {
   fall: "#d9a23c",
 };
 const KIND_LABEL: Record<BandKind, string> = {
-  indoor: "indoor start",
-  direct: "direct sow",
-  transplant: "transplant",
-  fall: "fall sow",
+  indoor: "Indoor Start",
+  direct: "Direct Sow",
+  transplant: "Transplant",
+  fall: "Fall Sow",
 };
 const HARVEST_COLOR = "#b8b08a";
 
@@ -78,18 +78,18 @@ export function WindowChart({
         ))}
         <span className="flex items-center gap-1">
           <span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: HARVEST_COLOR }} />
-          harvest
+          Harvest
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-2.5 w-4 rounded-sm bg-sky-200 dark:bg-sky-900" />
-          frost risk
+          Frost Risk
         </span>
         <button
           type="button"
           onClick={() => setShowTable((v) => !v)}
           className="ml-auto rounded-md bg-[var(--color-paper-deep)] px-2 py-1 font-medium"
         >
-          {showTable ? "Hide" : "Show"} data table
+          {showTable ? "Hide" : "Show"} Data Table
         </button>
       </div>
 
@@ -197,7 +197,7 @@ export function WindowChart({
               <g>
                 <line x1={x(today)} y1={TOP - 2} x2={x(today)} y2={H} stroke="#d23c2e" strokeWidth={1.5} />
                 <text x={x(today) + 3} y={TOP + 8} fontSize={9} fill="#d23c2e">
-                  today
+                  Today
                 </text>
               </g>
             )}
@@ -208,7 +208,7 @@ export function WindowChart({
       {selected && (
         <p className="mt-2 rounded-lg bg-[var(--color-paper-deep)]/60 p-2 text-sm">
           <strong>{KIND_LABEL[selected.kind]}</strong>: {formatShort(selected.start)} –{" "}
-          {formatShort(selected.end)} · harvest {formatShort(selected.harvestStart)} –{" "}
+          {formatShort(selected.end)} · Harvest: {formatShort(selected.harvestStart)} –{" "}
           {formatShort(selected.harvestEnd)}
           {selected.notes.map((n, i) => (
             <span key={i} className="block text-xs text-[var(--color-ink-soft)]">
