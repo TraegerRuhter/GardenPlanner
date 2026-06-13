@@ -166,7 +166,7 @@ export function SpriteCustomizer({
         className="w-full max-w-md rounded-2xl bg-[var(--color-paper)] p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-1 flex items-center justify-between">
           <h2 className="text-lg font-bold">{plant.commonName}</h2>
           <button
             type="button"
@@ -176,22 +176,28 @@ export function SpriteCustomizer({
             ✕
           </button>
         </div>
+        <p className="mb-4 text-xs text-[var(--color-ink-soft)]">
+          Customize sprite colors and shape. Changes preview in real time.
+        </p>
 
         {/* Stage previews */}
-        <div className="mb-5 flex items-end justify-center gap-3 rounded-xl bg-[var(--color-paper-deep)] p-4">
-          {previewUrls.map(({ stage, url }) => (
-            <div key={stage} className="flex flex-col items-center gap-1">
-              <img
-                src={url}
-                width={56}
-                height={56}
-                alt={stage}
-                className="pixel-art"
-                draggable={false}
-              />
-              <span className="text-[9px] text-[var(--color-ink-soft)]">{stage}</span>
-            </div>
-          ))}
+        <div className="mb-5 rounded-xl bg-[var(--color-paper-deep)] p-4">
+          <p className="mb-2 text-center text-[10px] font-medium text-[var(--color-ink-soft)]">Growth Stage Preview</p>
+          <div className="flex items-end justify-center gap-3">
+            {previewUrls.map(({ stage, url }) => (
+              <div key={stage} className="flex flex-col items-center gap-1">
+                <img
+                  src={url}
+                  width={56}
+                  height={56}
+                  alt={stage}
+                  className="pixel-art"
+                  draggable={false}
+                />
+                <span className="text-[9px] capitalize text-[var(--color-ink-soft)]">{stage}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Color slot editors */}
@@ -209,7 +215,7 @@ export function SpriteCustomizer({
 
         {/* Shape selector */}
         <div className="mt-4">
-          <p className="mb-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">Shape</p>
+          <p className="mb-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">Plant Shape</p>
           <div className="flex flex-wrap gap-1.5">
             {(Object.keys(SHAPE_LABELS) as SpriteShape[]).map((s) => (
               <button
@@ -229,23 +235,25 @@ export function SpriteCustomizer({
         </div>
 
         {/* Actions */}
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-5 flex items-center gap-2">
           <button
             type="button"
             onClick={() => void handleSave()}
-            className="rounded-lg bg-[var(--color-canopy)] px-4 py-2 text-sm font-medium text-white"
+            className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
+              saved ? "bg-[var(--color-success)]" : "bg-[var(--color-canopy)] hover:opacity-90"
+            }`}
           >
-            {saved ? "✓ Saved" : "Save"}
+            {saved ? "✓ Saved!" : "Save Changes"}
           </button>
           <button
             type="button"
             onClick={() => void handleReset()}
-            className="rounded-lg bg-[var(--color-paper-deep)] px-3 py-2 text-sm font-medium"
+            className="rounded-lg bg-[var(--color-paper-deep)] px-3 py-2 text-sm font-medium hover:opacity-80"
           >
-            Reset
+            Reset to Default
           </button>
           <span className="ml-auto text-[10px] text-[var(--color-ink-soft)]">
-            live preview
+            Live Preview
           </span>
         </div>
       </div>

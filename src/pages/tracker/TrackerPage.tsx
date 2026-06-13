@@ -260,7 +260,6 @@ function InstanceCard({
   );
 }
 
-/** §13.6 horizontal stage track: past solid, current ringed, future hollow. */
 function StageTimeline({
   seq,
   idx,
@@ -271,21 +270,28 @@ function StageTimeline({
   projected: Partial<Record<string, string>>;
 }) {
   return (
-    <ol className="mt-1.5 flex flex-wrap items-center gap-0" aria-label="Stage timeline">
-      {seq.map((s, i) => (
-        <li key={s} className="flex items-center" title={`${s}${projected[s] ? ` — ${projected[s]}` : ""}`}>
-          {i > 0 && <span className={`h-0.5 w-3 ${i <= idx ? "bg-[var(--color-canopy)]" : "bg-[var(--color-paper-deep)]"}`} />}
-          <span
-            className={`inline-block h-2.5 w-2.5 rounded-full ${
-              i < idx
-                ? "bg-[var(--color-canopy)]"
-                : i === idx
-                  ? "bg-[var(--color-leaf)] ring-2 ring-[var(--color-canopy)]"
-                  : "border border-[var(--color-ink-soft)]/40 bg-transparent"
-            }`}
-          />
-        </li>
-      ))}
+    <ol className="mt-2 flex flex-wrap items-center gap-0" aria-label="Growth stage timeline">
+      {seq.map((s, i) => {
+        const dateStr = projected[s] ? ` · ${formatShort(projected[s]!)}` : "";
+        const label = s.charAt(0).toUpperCase() + s.slice(1);
+        return (
+          <li key={s} className="group relative flex items-center" title={`${label}${dateStr}`}>
+            {i > 0 && <span className={`h-0.5 w-4 ${i <= idx ? "bg-[var(--color-canopy)]" : "bg-[var(--color-paper-deep)]"}`} />}
+            <span
+              className={`inline-block h-3 w-3 rounded-full ${
+                i < idx
+                  ? "bg-[var(--color-canopy)]"
+                  : i === idx
+                    ? "bg-[var(--color-leaf)] ring-2 ring-[var(--color-canopy)]"
+                    : "border-2 border-[var(--color-ink-soft)]/30 bg-transparent"
+              }`}
+            />
+            {i === idx && (
+              <span className="ml-1 text-[9px] font-medium text-[var(--color-canopy)]">{label}</span>
+            )}
+          </li>
+        );
+      })}
     </ol>
   );
 }
