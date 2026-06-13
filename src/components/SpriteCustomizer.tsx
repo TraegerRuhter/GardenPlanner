@@ -10,10 +10,11 @@ import {
   registerDynamicAccent,
   resolvedPalette,
   spriteFor,
-  isRootIcon,
-  setRootIcon,
+  getPlantShape,
+  setPlantShape,
   type SpritePalette,
 } from "../sprites/sprites";
+import { SHAPE_LABELS, type SpriteShape } from "../sprites/maps";
 
 const PREVIEW_STAGES: StageKey[] = [
   "seedling",
@@ -112,7 +113,7 @@ export function SpriteCustomizer({
     const p = basePalette;
     return { f: p.f, F: p.F, l: p.l, L: p.L, s: p.s };
   });
-  const [rootCrop, setRootCrop] = useState(() => isRootIcon(plant.iconKey));
+  const [shape, setShape] = useState<SpriteShape>(() => getPlantShape(plant.iconKey));
   const [saved, setSaved] = useState(false);
 
   const setSlot = useCallback((key: string, shadeKey: string, main: string, shade: string) => {
@@ -127,31 +128,32 @@ export function SpriteCustomizer({
 
   const previewUrls = useMemo(() => {
     registerDynamicAccent(plant.iconKey, colors);
-    setRootIcon(plant.iconKey, rootCrop);
+    setPlantShape(plant.iconKey, shape);
     return PREVIEW_STAGES.map((stage) => ({
       stage,
       url: spriteFor(plant.iconKey, plant.category, stage, 6),
     }));
-  }, [colors, rootCrop, plant.iconKey, plant.category]);
+  }, [colors, shape, plant.iconKey, plant.category]);
 
   async function handleSave() {
     registerDynamicAccent(plant.iconKey, colors);
-    setRootIcon(plant.iconKey, rootCrop);
+    setPlantShape(plant.iconKey, shape);
     await db.spriteOverrides.put({
       iconKey: plant.iconKey,
       palette: colors,
-      isRoot: rootCrop,
+      isRoot: shape === "root",
+      shape,
     });
     setSaved(true);
   }
 
   async function handleReset() {
     registerDynamicAccent(plant.iconKey, {});
-    setRootIcon(plant.iconKey, false);
+    setPlantShape(plant.iconKey, "bush");
     await db.spriteOverrides.delete(plant.iconKey);
     const fresh = resolvedPalette(plant.iconKey, plant.category);
     setColors({ f: fresh.f, F: fresh.F, l: fresh.l, L: fresh.L, s: fresh.s });
-    setRootCrop(false);
+    setShape("bush");
     setSaved(false);
   }
 
@@ -205,19 +207,26 @@ export function SpriteCustomizer({
           ))}
         </div>
 
-        {/* Root crop toggle */}
-        <label className="mt-4 flex items-center gap-2 rounded-lg bg-[var(--color-paper-deep)] px-3 py-2 text-sm">
-          <input
-            type="checkbox"
-            checked={rootCrop}
-            onChange={(e) => { setRootCrop(e.target.checked); setSaved(false); }}
-            className="h-4 w-4 rounded"
-          />
-          <span className="font-medium">Root crop</span>
-          <span className="text-[11px] text-[var(--color-ink-soft)]">
-            — yield at soil line
-          </span>
-        </label>
+        {/* Shape selector */}
+        <div className="mt-4">
+          <p className="mb-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">Shape</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(Object.keys(SHAPE_LABELS) as SpriteShape[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => { setShape(s); setSaved(false); }}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                  shape === s
+                    ? "bg-[var(--color-canopy)] text-white shadow-sm"
+                    : "bg-[var(--color-paper-deep)] text-[var(--color-ink)] hover:bg-[var(--color-canopy)]/20"
+                }`}
+              >
+                {SHAPE_LABELS[s]}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Actions */}
         <div className="mt-4 flex items-center gap-2">

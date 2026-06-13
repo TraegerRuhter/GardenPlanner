@@ -6,7 +6,7 @@
  */
 
 import type { PlantCategory, StageKey } from "../types/models";
-import { ROOT_STAGE_MAPS, STAGE_MAPS, type PixelMap } from "./maps";
+import { SHAPE_MAPS, type PixelMap, type SpriteShape } from "./maps";
 
 interface Palette {
   m: string;
@@ -72,19 +72,47 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
   basil: { f: "#efe9ff", F: "#cfc6ee" },
 };
 
-/** iconKeys that render the root-crop yield maps for sizing/harvest. */
-const ROOT_ICONS = new Set(["carrot", "radish", "beet", "onion_bulb"]);
+/** Per-plant sprite shape overrides. */
+const PLANT_SHAPES = new Map<string, SpriteShape>();
 
-export function setRootIcon(iconKey: string, isRoot: boolean) {
-  if (isRoot) ROOT_ICONS.add(iconKey);
-  else ROOT_ICONS.delete(iconKey);
+/** Default shape assignments for built-in catalog plants. */
+const DEFAULT_SHAPES: Record<string, SpriteShape> = {
+  carrot: "root",
+  radish: "root",
+  beet: "root",
+  onion_bulb: "bulb",
+  tomato: "bush",
+  pepper_sweet: "bush",
+  cucumber: "vine",
+  zucchini: "vine",
+  bush_bean: "bush",
+  snap_pea: "climbing",
+  broccoli: "tall",
+  kale: "leafy",
+  lettuce_leaf: "leafy",
+  spinach: "leafy",
+  basil: "herb",
+};
+
+export function setPlantShape(iconKey: string, shape: SpriteShape) {
+  PLANT_SHAPES.set(iconKey, shape);
   for (const k of cache.keys()) {
     if (k.startsWith(`${iconKey}/`)) cache.delete(k);
   }
 }
 
+export function getPlantShape(iconKey: string): SpriteShape {
+  return PLANT_SHAPES.get(iconKey) ?? DEFAULT_SHAPES[iconKey] ?? "bush";
+}
+
+/** @deprecated Use setPlantShape(iconKey, "root") / setPlantShape(iconKey, "bush") */
+export function setRootIcon(iconKey: string, isRoot: boolean) {
+  setPlantShape(iconKey, isRoot ? "root" : "bush");
+}
+
+/** @deprecated Use getPlantShape(iconKey) === "root" */
 export function isRootIcon(iconKey: string): boolean {
-  return ROOT_ICONS.has(iconKey);
+  return getPlantShape(iconKey) === "root";
 }
 
 export function resolvedPalette(iconKey: string, category: PlantCategory): Palette {
@@ -94,11 +122,8 @@ export function resolvedPalette(iconKey: string, category: PlantCategory): Palet
 const cache = new Map<string, string>();
 
 function mapFor(iconKey: string, stage: StageKey): PixelMap {
-  if (ROOT_ICONS.has(iconKey)) {
-    const override = ROOT_STAGE_MAPS[stage];
-    if (override) return override;
-  }
-  return STAGE_MAPS[stage];
+  const shape = getPlantShape(iconKey);
+  return SHAPE_MAPS[shape][stage];
 }
 
 function paletteFor(iconKey: string, category: PlantCategory): Palette {
