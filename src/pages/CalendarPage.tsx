@@ -19,20 +19,32 @@ import { Badge, badgeTone } from "../components";
 export function CalendarPage() {
   const hemisphere = useAppStore((s) => s.settings.hemisphere);
   const defaultLocationId = useAppStore((s) => s.settings.defaultLocationId);
+  const activeGardenId = useAppStore((s) => s.activeGardenId);
   const [editing, setEditing] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [selectedPlants, setSelectedPlants] = useState<Set<string> | null>(null);
+  const [query, setQuery] = useState("");
+  const [showPicker, setShowPicker] = useState(false);
 
   const year = new Date().getFullYear();
 
   const data = useLiveQuery(async () => {
     const climate = await getActiveClimate();
     const plants = await db.catalog_plants.orderBy("commonName").toArray();
-    return { climate, plants };
-  }, [defaultLocationId, refresh]);
+    let gardenPlantIds: string[] = [];
+    if (activeGardenId) {
+      const instances = await db.instances.where("gardenId").equals(activeGardenId).toArray();
+      gardenPlantIds = [
+        ...new Set(
+          instances.filter((i) => i.status === "active" || i.status === "planned").map((i) => i.plantId),
+        ),
+      ];
+    }
+    return { climate, plants, gardenPlantIds };
+  }, [defaultLocationId, refresh, activeGardenId]);
 
   if (!data) return <Pad>Loading…</Pad>;
-  const { climate, plants } = data;
+  const { climate, plants, gardenPlantIds } = data;
 
   if (!climate || editing) {
     return (
@@ -52,7 +64,25 @@ export function CalendarPage() {
   }
 
   const { location, profile } = climate;
-  const active = selectedPlants ?? new Set(plants.map((p) => p.id));
+  // Default to the active garden's plants so the chart isn't a wall of every
+  // catalog entry; the picker below lets you switch to All / None / custom.
+  const allIds = plants.map((p) => p.id);
+  const defaultIds = gardenPlantIds.length ? gardenPlantIds : allIds;
+  const active = selectedPlants ?? new Set(defaultIds);
+  const term = query.trim().toLowerCase();
+  const pickerPlants = term
+    ? plants.filter(
+        (p) => p.commonName.toLowerCase().includes(term) || p.scientificName.toLowerCase().includes(term),
+      )
+    : plants;
+
+  const togglePlant = (id: string) =>
+    setSelectedPlants((prev) => {
+      const next = new Set(prev ?? defaultIds);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const rows: ChartRow[] = plants
     .filter((p) => active.has(p.id))
@@ -91,44 +121,82 @@ export function CalendarPage() {
         </p>
       </div>
 
-      <p className="mb-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">Filter by Plant</p>
-      <div className="mb-4 flex flex-wrap gap-1" role="group" aria-label="Filter plants">
-        <button
-          type="button"
-          onClick={() => setSelectedPlants(null)}
-          aria-pressed={selectedPlants === null}
-          className={chipClass(selectedPlants === null)}
-        >
-          Show All
-        </button>
-        {plants.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            aria-pressed={active.has(p.id)}
-            onClick={() =>
-              setSelectedPlants((prev) => {
-                const next = new Set(prev ?? plants.map((x) => x.id));
-                if (next.has(p.id)) next.delete(p.id);
-                else next.add(p.id);
-                return next;
-              })
-            }
-            className={chipClass(active.has(p.id))}
-          >
-            {p.commonName}
-          </button>
-        ))}
+      <div className="mb-4">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-[var(--color-ink-soft)]">Plants</span>
+          <span className="text-xs text-[var(--color-ink-soft)]">
+            {rows.length} of {plants.length} shown
+          </span>
+          <div className="ml-auto flex flex-wrap gap-1">
+            {gardenPlantIds.length > 0 && (
+              <button type="button" onClick={() => setSelectedPlants(new Set(gardenPlantIds))} className={quickClass}>
+                My Garden ({gardenPlantIds.length})
+              </button>
+            )}
+            <button type="button" onClick={() => setSelectedPlants(new Set(allIds))} className={quickClass}>
+              All
+            </button>
+            <button type="button" onClick={() => setSelectedPlants(new Set())} className={quickClass}>
+              None
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPicker((v) => !v)}
+              aria-expanded={showPicker}
+              className={quickClass}
+            >
+              {showPicker ? "Hide List" : "Choose…"}
+            </button>
+          </div>
+        </div>
+
+        {showPicker && (
+          <div className="rounded-lg border border-[var(--color-paper-deep)] bg-white/30 p-2 dark:bg-white/5">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`Search ${plants.length} plants…`}
+              aria-label="Search plants"
+              className="w-full rounded-lg border border-[var(--color-paper-deep)] bg-white/60 px-2 py-1 text-sm dark:bg-black/20"
+            />
+            <div className="mt-2 flex max-h-48 flex-wrap gap-1 overflow-y-auto" role="group" aria-label="Filter plants">
+              {pickerPlants.length === 0 ? (
+                <p className="px-1 py-1 text-xs text-[var(--color-ink-soft)]">No plants match “{query}”.</p>
+              ) : (
+                pickerPlants.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    aria-pressed={active.has(p.id)}
+                    onClick={() => togglePlant(p.id)}
+                    className={chipClass(active.has(p.id))}
+                  >
+                    {p.commonName}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {rows.length === 0 ? (
-        <Pad>No plants selected — choose plants above to see their planting windows.</Pad>
+        <Pad>
+          No plants selected.{" "}
+          {gardenPlantIds.length > 0
+            ? "Tap “My Garden” to see what you’ve planted, or "
+            : "Add plants to your garden, or tap "}
+          “All” / “Choose…” above to pick what to chart.
+        </Pad>
       ) : (
         <WindowChart rows={rows} climate={profile} year={year} hemisphere={hemisphere} />
       )}
     </section>
   );
 }
+
+const quickClass = "rounded-md bg-[var(--color-paper-deep)] px-2 py-1 text-xs font-medium text-[var(--color-ink-soft)]";
 
 function chipClass(on: boolean): string {
   return `rounded-full px-2.5 py-1 text-xs font-medium ${
