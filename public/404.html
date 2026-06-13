@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script>
+      // SPA redirect: rewrite the path as a query string so index.html can restore it.
+      var seg = location.pathname.slice(1).split('/').slice(1).join('/');
+      var q = seg ? '/' + seg : '';
+      location.replace(
+        location.origin + '/GardenPlanner/?p=' + encodeURIComponent(q + location.search)
+      );
+    </script>
+  </head>
+</html>
