@@ -74,6 +74,23 @@ export function SettingsPage() {
         </div>
 
         <h2 className="border-t border-[var(--color-paper-deep)] pt-4 font-semibold">
+          Plant database API
+        </h2>
+        <label className="block text-sm">
+          <span className="font-medium">Perenual API key</span>
+          <span className="ml-1 text-xs text-[var(--color-ink-soft)]">
+            (free at perenual.com — enables "Search online" in Encyclopedia)
+          </span>
+          <input
+            type="password"
+            value={settings.perenualApiKey ?? ""}
+            onChange={(e) => update({ perenualApiKey: e.target.value || undefined })}
+            placeholder="sk-..."
+            className="mt-1 block w-full rounded-lg border border-[var(--color-paper-deep)] bg-white/60 px-3 py-2 text-sm dark:bg-black/20"
+          />
+        </label>
+
+        <h2 className="border-t border-[var(--color-paper-deep)] pt-4 font-semibold">
           Seed stash (§31.1)
         </h2>
         <SeedStash />
