@@ -78,7 +78,10 @@ export function JournalPanel({ instance }: { instance: PlantInstance }) {
   }
 
   return (
-    <div className="mt-2 rounded-lg border border-[var(--color-paper-deep)] bg-white/40 p-2 text-sm dark:bg-white/5">
+    <div className="mt-2 rounded-lg border border-[var(--color-paper-deep)] bg-white/40 p-3 text-sm dark:bg-white/5">
+      <p className="mb-2 text-xs font-semibold text-[var(--color-ink-soft)]">
+        Plant Journal {entries ? `(${entries.length} entr${entries.length === 1 ? "y" : "ies"})` : ""}
+      </p>
       <form
         className="flex flex-wrap items-center gap-2"
         onSubmit={(e) => {
@@ -89,12 +92,12 @@ export function JournalPanel({ instance }: { instance: PlantInstance }) {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Journal note…"
+          placeholder="Add a note about this plant…"
           aria-label="Journal note"
-          className="min-w-36 flex-1 rounded-lg border border-[var(--color-paper-deep)] bg-white/60 px-2 py-1.5 text-xs dark:bg-black/20"
+          className="min-w-36 flex-1 rounded-lg border border-[var(--color-paper-deep)] bg-white/60 px-2.5 py-1.5 text-xs dark:bg-black/20"
         />
-        <label className="cursor-pointer rounded-lg bg-[var(--color-paper-deep)] px-2 py-1.5 text-xs font-medium">
-          📷 {file ? file.name.slice(0, 14) : "Photo"}
+        <label className="cursor-pointer rounded-lg bg-[var(--color-paper-deep)] px-2.5 py-1.5 text-xs font-medium hover:opacity-80">
+          📷 {file ? file.name.slice(0, 14) : "Add Photo"}
           <input
             type="file"
             accept="image/*"
@@ -106,25 +109,31 @@ export function JournalPanel({ instance }: { instance: PlantInstance }) {
         <button
           type="submit"
           disabled={saving || (!text.trim() && !file)}
-          className="rounded-lg bg-[var(--color-canopy)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-[var(--color-canopy)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 hover:opacity-90"
         >
-          Add
+          Save Entry
         </button>
       </form>
 
       {entries && entries.length > 0 && (
-        <ul className="mt-2 space-y-2">
+        <ul className="mt-3 space-y-2">
           {entries.map((e) => (
-            <li key={e.id} className="rounded-lg bg-[var(--color-paper-deep)]/40 p-2">
-              <p className="text-[11px] text-[var(--color-ink-soft)]">
+            <li key={e.id} className="rounded-lg bg-[var(--color-paper-deep)]/40 p-2.5">
+              <p className="text-[11px] font-medium text-[var(--color-ink-soft)]">
                 {e.date}
-                {e.stageAtEntry ? ` · ${e.stageAtEntry}` : ""}
+                {e.stageAtEntry ? ` · Stage: ${e.stageAtEntry}` : ""}
               </p>
-              {e.text && <p className="text-xs">{e.text}</p>}
+              {e.text && <p className="mt-0.5 text-xs">{e.text}</p>}
               {e.photoBlobId && <BlobImg blobId={e.photoBlobId} alt={`Photo ${e.date}`} />}
             </li>
           ))}
         </ul>
+      )}
+
+      {entries && entries.length === 0 && (
+        <p className="mt-2 text-center text-xs text-[var(--color-ink-soft)]">
+          No journal entries yet. Add notes and photos to track this plant's progress.
+        </p>
       )}
     </div>
   );

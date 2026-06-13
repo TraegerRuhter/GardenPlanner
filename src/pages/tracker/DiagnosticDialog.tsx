@@ -73,7 +73,7 @@ export function DiagnosticDialog({
   if (!setup.tree) {
     return (
       <Overlay onClose={() => onClose()}>
-        <p>No diagnostic tree for "{symptom}" yet — rolled back without diagnosis.</p>
+        <p className="text-sm">No diagnostic guide is available for "<strong>{symptom.replace(/_/g, " ")}</strong>" yet. The stage has been rolled back without a diagnosis.</p>
       </Overlay>
     );
   }
@@ -109,11 +109,11 @@ export function DiagnosticDialog({
   return (
     <Overlay onClose={() => onClose()}>
       <h2 className="mb-1 text-lg font-bold">
-        Why is the {plant.commonName.toLowerCase()} behind?
+        Diagnosing: {plant.commonName}
       </h2>
       <p className="mb-3 text-xs text-[var(--color-ink-soft)]">
-        Symptom: {symptom.replace(/_/g, " ")} · answers the app can check are
-        pre-filled with evidence — override freely.
+        Symptom: <strong>{symptom.replace(/_/g, " ")}</strong> · Some answers are
+        auto-filled from your garden data — you can override any of them.
       </p>
 
       {current && (
@@ -121,7 +121,7 @@ export function DiagnosticDialog({
           <p className="font-medium">{current.question}</p>
           {auto && auto.answer !== null && (
             <p className="rounded-lg bg-[var(--color-paper-deep)]/60 p-2 text-xs">
-              🔎 App's read: <strong>{auto.answer ? "yes" : "no"}</strong> — {auto.evidence}
+              🔎 Auto-detected: <strong>{auto.answer ? "Yes" : "No"}</strong> — {auto.evidence}
             </p>
           )}
           {auto && auto.answer === null && auto.evidence && (
@@ -149,10 +149,10 @@ export function DiagnosticDialog({
       {diagnosis && (
         <div className="space-y-3">
           <p className="rounded-lg bg-[var(--color-warn)]/10 p-3 text-sm">
-            <strong>Probable cause:</strong> {diagnosis.cause}
+            <strong>Probable Cause:</strong> {diagnosis.cause}
           </p>
           <p className="rounded-lg bg-[var(--color-leaf)]/15 p-3 text-sm">
-            <strong>Remedy:</strong> {diagnosis.remedy}
+            <strong>Recommended Remedy:</strong> {diagnosis.remedy}
           </p>
           <div className="flex flex-wrap gap-2">
             {diagnosis.createsTask && !taskMade && (
@@ -161,16 +161,16 @@ export function DiagnosticDialog({
                 onClick={() => void makeTask(diagnosis.createsTask!)}
                 className="rounded-lg bg-[var(--color-canopy)] px-3 py-1.5 text-sm font-medium text-white"
               >
-                + Create remedy task
+                Create Remedy Task
               </button>
             )}
-            {taskMade && <span className="py-1.5 text-sm text-[var(--color-canopy)]">✓ Task created</span>}
+            {taskMade && <span className="py-1.5 text-sm text-[var(--color-success)]">✓ Remedy task created</span>}
             <button
               type="button"
               onClick={() => onClose(setup.tree!.id, diagnosis.cause)}
               className="rounded-lg bg-[var(--color-paper-deep)] px-3 py-1.5 text-sm font-medium"
             >
-              Done
+              Close Diagnosis
             </button>
           </div>
         </div>
@@ -178,7 +178,7 @@ export function DiagnosticDialog({
 
       {trail.length > 0 && (
         <details className="mt-3 text-xs text-[var(--color-ink-soft)]">
-          <summary className="cursor-pointer">Path taken</summary>
+          <summary className="cursor-pointer font-medium">Diagnostic Steps Taken</summary>
           <ol className="mt-1 list-decimal pl-4">
             {trail.map((t, i) => (
               <li key={i}>{t}</li>
