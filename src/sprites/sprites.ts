@@ -95,6 +95,22 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
   shallot: { f: "#c08a5a", F: "#9a6a40" },
   scallion: { f: "#8fcf6f", F: "#6aa84f" },
   zinnia: { f: "#e2487f", F: "#b8366a" },
+  // tranche 4 (herbs + flowers; f = bloom/foliage accent)
+  oregano: { f: "#b483a8", F: "#8a6080" },
+  sage: { f: "#7e8cc0", F: "#5e6a98" },
+  rosemary: { f: "#8aa6d0", F: "#6a86b0" },
+  lavender: { f: "#9a7cc0", F: "#745aa0" },
+  marjoram: { f: "#cdb4c8", F: "#a78aa0" },
+  savory: { f: "#c8cdb0", F: "#a4aa88" },
+  catnip: { f: "#c2b0d0", F: "#9a88a8" },
+  chives: { f: "#b07ac0", F: "#8a5a9a" },
+  tarragon: { f: "#6a9a5a", F: "#4f7a40" },
+  chamomile: { f: "#f3e9c0", F: "#d2c690" },
+  cosmos: { f: "#e589b0", F: "#bd6890" },
+  calendula: { f: "#f0972e", F: "#c4731c" },
+  fennel: { f: "#d9c24a", F: "#b09c2e" },
+  chervil: { f: "#e8ecd0", F: "#c4c8ac" },
+  lovage: { f: "#b6c24a", F: "#92a02e" },
 };
 
 /** Per-plant sprite shape overrides. */
@@ -142,6 +158,22 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   shallot: "bulb",
   scallion: "grass",
   zinnia: "flower",
+  // tranche 4
+  oregano: "herb",
+  sage: "herb",
+  rosemary: "herb",
+  lavender: "herb",
+  marjoram: "herb",
+  savory: "herb",
+  catnip: "herb",
+  chives: "grass",
+  tarragon: "herb",
+  chamomile: "flower",
+  cosmos: "flower",
+  calendula: "flower",
+  fennel: "herb",
+  chervil: "herb",
+  lovage: "tall",
 };
 
 export function setPlantShape(iconKey: string, shape: SpriteShape) {
