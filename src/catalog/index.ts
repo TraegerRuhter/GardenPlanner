@@ -10,13 +10,14 @@ export { families } from "./families";
 export { stageTemplates } from "./stageTemplates";
 import { plants as corePlants } from "./plants";
 import { plantsExpansion } from "./plantsExpansion";
+import { plantsTranche3 } from "./plantsTranche3";
 
-/** Core 15 (Phase 0) + tranche 2 (Phase 5). Remaining §28.2 list: backlog. */
-export const plants = [...corePlants, ...plantsExpansion];
+/** Core 15 (Phase 0) + tranche 2 + tranche 3 staples. Remaining §28.2: backlog. */
+export const plants = [...corePlants, ...plantsExpansion, ...plantsTranche3];
 export { varietals } from "./varietals";
 export { companions } from "./companions";
 export { recipes } from "./recipes";
 export { diagnostics } from "./diagnostics";
 
 /** Bump whenever bundled catalog content changes; drives re-seeding. */
-export const CATALOG_VERSION = 3;
+export const CATALOG_VERSION = 4;

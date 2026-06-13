@@ -32,12 +32,11 @@ describe("catalog seeding (§7.1)", () => {
       .where("familyId")
       .equals("brassicaceae")
       .toArray();
-    expect(brassicas.map((p) => p.id).sort()).toEqual([
-      "arugula",
-      "broccoli",
-      "cabbage",
-      "kale",
-      "radish",
-    ]);
+    const ids = brassicas.map((p) => p.id);
+    // every result really is a brassica, and the index returns the known core set
+    expect(brassicas.every((p) => p.familyId === "brassicaceae")).toBe(true);
+    for (const id of ["arugula", "broccoli", "cabbage", "kale", "radish"]) {
+      expect(ids).toContain(id);
+    }
   });
 });
