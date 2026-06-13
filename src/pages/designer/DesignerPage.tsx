@@ -66,7 +66,10 @@ export default function DesignerPage() {
   if (!data.garden) {
     return (
       <section className="mx-auto max-w-xl px-4 py-6">
-        <h1 className="mb-3 text-2xl font-bold">Designer</h1>
+        <h1 className="mb-1 text-2xl font-bold">Garden Designer</h1>
+        <p className="mb-4 text-sm text-[var(--color-ink-soft)]">
+          Create your first garden to start designing the layout.
+        </p>
         <NewGardenForm
           onCreate={async (name) => {
             const g = await createGarden(name, defaultLocationId, unitSystem);
@@ -263,13 +266,13 @@ function DesignerBody({
         <button
           type="button"
           onClick={() => void onNewGarden()}
-          className="rounded-lg bg-[var(--color-paper-deep)] px-2 py-1 text-xs font-medium"
+          className="rounded-lg bg-[var(--color-paper-deep)] px-2.5 py-1.5 text-xs font-medium hover:opacity-80"
         >
-          + New garden
+          + New Garden
         </button>
 
-        <label className="ml-auto flex items-center gap-1 text-xs font-medium">
-          North bearing
+        <label className="ml-auto flex items-center gap-1 text-xs font-medium" title="Compass bearing where north is relative to the top of the garden. Used for sun calculations.">
+          🧭 North °
           <input
             type="number"
             min={0}
@@ -285,17 +288,17 @@ function DesignerBody({
           aria-pressed={sunOverlay}
           onClick={() => setSunOverlay((v) => !v)}
           className={`rounded-lg px-2 py-1 text-xs font-medium ${sunOverlay ? "bg-amber-400 text-amber-950" : "bg-[var(--color-paper-deep)]"}`}
-          title="Estimated direct-sun hours (solstice+equinox average) — an estimate, not a measurement"
+          title="Estimated direct-sun hours overlay (solstice+equinox average)"
         >
-          ☀ Sun map
+          ☀ Sun Map
         </button>
         <button
           type="button"
           aria-pressed={showMirror}
           onClick={() => setShowMirror((v) => !v)}
-          className="rounded-lg bg-[var(--color-paper-deep)] px-2 py-1 text-xs font-medium"
+          className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${showMirror ? "bg-[var(--color-canopy)] text-white" : "bg-[var(--color-paper-deep)]"}`}
         >
-          ☰ List view
+          ☰ Table View
         </button>
       </div>
 
@@ -303,10 +306,10 @@ function DesignerBody({
         {/* palette */}
         <aside className="order-2 flex shrink-0 flex-row gap-2 overflow-x-auto lg:order-1 lg:w-56 lg:flex-col lg:overflow-visible" aria-label="Tile palette">
           <PaletteGroup label="Tools">
-            <ToolBtn active={tool.t === "select"} onClick={() => setTool({ t: "select" })}>👆 Select</ToolBtn>
-            <ToolBtn active={tool.t === "erase"} onClick={() => setTool({ t: "erase" })}>🧹 Erase</ToolBtn>
-            <ToolBtn active={tool.t === "elev_up"} onClick={() => setTool({ t: "elev_up" })}>⬆ Raise +5cm</ToolBtn>
-            <ToolBtn active={tool.t === "elev_down"} onClick={() => setTool({ t: "elev_down" })}>⬇ Lower −5cm</ToolBtn>
+            <ToolBtn active={tool.t === "select"} onClick={() => setTool({ t: "select" })}>👆 Select Tile</ToolBtn>
+            <ToolBtn active={tool.t === "erase"} onClick={() => setTool({ t: "erase" })}>🧹 Erase Tile</ToolBtn>
+            <ToolBtn active={tool.t === "elev_up"} onClick={() => setTool({ t: "elev_up" })}>⬆ Raise +5 cm</ToolBtn>
+            <ToolBtn active={tool.t === "elev_down"} onClick={() => setTool({ t: "elev_down" })}>⬇ Lower −5 cm</ToolBtn>
           </PaletteGroup>
 
           <PaletteGroup label="Plants">
@@ -376,7 +379,7 @@ function DesignerBody({
             height={460}
           />
 
-          {/* warnings toast (§12.6: non-blocking) */}
+          {/* warnings toast */}
           {warnings.length > 0 && (
             <div role="status" className="mt-2 space-y-1">
               {warnings.map((w, i) => (
@@ -414,7 +417,7 @@ function DesignerBody({
               }
               className="h-9 rounded-lg bg-[var(--color-paper-deep)] px-3 text-sm font-medium"
             >
-              + Add area (satellite)
+              + Add Bed
             </button>
           </div>
 
@@ -504,11 +507,11 @@ function AreaConfig({
         <label>Rows
           <input type="number" min={1} max={64} value={area.grid.rows} onChange={(e) => onChange({ grid: { ...area.grid, rows: clampInt(e.target.value, 1, 64) } })} className="mt-1 block w-16 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
         </label>
-        <label>Drainage (§31.2)
+        <label>Soil Drainage
           <select value={area.soilDrainage} onChange={(e) => onChange({ soilDrainage: e.target.value as GardenArea["soilDrainage"] })} className="mt-1 block rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20">
-            <option value="fast">fast</option>
-            <option value="moderate">moderate</option>
-            <option value="poor">poor</option>
+            <option value="fast">Fast</option>
+            <option value="moderate">Moderate</option>
+            <option value="poor">Poor</option>
           </select>
         </label>
         <label>Rotation°
@@ -560,15 +563,15 @@ function Inspector({
         {tile?.elevationCm ? ` · elevation ${tile.elevationCm > 0 ? "+" : ""}${tile.elevationCm} cm` : ""}
       </p>
       {!content || content.type === "empty" ? (
-        <p className="text-[var(--color-ink-soft)]">Empty soil.</p>
+        <p className="text-[var(--color-ink-soft)]">Empty tile — select a tool from the palette to place something here.</p>
       ) : content.type === "plant" && inst ? (
         <div className="mt-1 space-y-2">
           <p>
-            {plantName} —{" "}
+            <span className="font-medium">{plantName}</span>{" — "}
             {inst.status === "planned" ? (
-              <span className="text-[var(--color-warn)]">planned (not yet planted)</span>
+              <span className="text-[var(--color-warn)]">Planned (not yet planted)</span>
             ) : (
-              <span className="capitalize">{inst.status}, stage: {inst.currentStage}, planted {inst.plantedOn}</span>
+              <span className="capitalize">Status: {inst.status} · Stage: {inst.currentStage} · Planted {inst.plantedOn}</span>
             )}
           </p>
           {inst.status === "planned" && (
@@ -599,10 +602,15 @@ function NewGardenForm({ onCreate }: { onCreate: (name: string) => Promise<void>
   const [name, setName] = useState(`Garden ${new Date().getFullYear()}`);
   return (
     <div className="space-y-3">
-      <p className="text-[var(--color-ink-soft)]">
-        Lay out your real beds on a tile grid — every tile is one square foot
-        by default. Plants, trellises, paths, drip lines, elevation; the works.
-      </p>
+      <div className="rounded-xl border border-[var(--color-paper-deep)] bg-white/30 p-4 dark:bg-white/5">
+        <p className="font-medium text-[var(--color-ink)]">What you can do:</p>
+        <ul className="mt-1.5 space-y-0.5 text-sm text-[var(--color-ink-soft)]">
+          <li>🌱 Place plants on a tile grid (each tile = 1 sq ft)</li>
+          <li>🏗️ Add trellises, fences, paths, and water lines</li>
+          <li>☀ View estimated sun exposure per tile</li>
+          <li>📐 Adjust elevation and rotation per bed</li>
+        </ul>
+      </div>
       <div className="flex gap-2">
         <input
           value={name}
@@ -614,9 +622,9 @@ function NewGardenForm({ onCreate }: { onCreate: (name: string) => Promise<void>
           type="button"
           disabled={!name.trim()}
           onClick={() => void onCreate(name.trim())}
-          className="rounded-lg bg-[var(--color-canopy)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-[var(--color-canopy)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:opacity-90"
         >
-          Create garden
+          Create Garden
         </button>
       </div>
     </div>
