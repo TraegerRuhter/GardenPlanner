@@ -19,7 +19,6 @@ import type {
   Location,
   Plant,
   PlantInstance,
-  StructureKind,
 } from "../../types/models";
 import {
   activeInstancesForGarden,
@@ -36,8 +35,8 @@ import { plantHeightResolver, sunMapForArea, tileKey, type SunMap } from "../../
 import { getActiveClimate } from "../../db/climateRepo";
 import { activateInstance } from "../../db/instancesRepo";
 import { todayISO } from "../../lib/dates";
-import { SpriteImg } from "../../components/SpriteImg";
 import { GardenCanvas } from "./GardenCanvas";
+import { DesignerPalette } from "./DesignerPalette";
 import { MirrorTable } from "./MirrorTable";
 import { mirrorRows } from "./mirrorRows";
 import { HARDSCAPES, STRUCTURES, TILE_PX, WATER, type Tool } from "./palette";
@@ -304,56 +303,7 @@ function DesignerBody({
 
       <div className="flex flex-col gap-3 lg:flex-row">
         {/* palette */}
-        <aside className="order-2 flex shrink-0 flex-row gap-2 overflow-x-auto lg:order-1 lg:w-56 lg:flex-col lg:overflow-visible" aria-label="Tile palette">
-          <PaletteGroup label="Tools">
-            <ToolBtn active={tool.t === "select"} onClick={() => setTool({ t: "select" })}>👆 Select Tile</ToolBtn>
-            <ToolBtn active={tool.t === "erase"} onClick={() => setTool({ t: "erase" })}>🧹 Erase Tile</ToolBtn>
-            <ToolBtn active={tool.t === "elev_up"} onClick={() => setTool({ t: "elev_up" })}>⬆ Raise +5 cm</ToolBtn>
-            <ToolBtn active={tool.t === "elev_down"} onClick={() => setTool({ t: "elev_down" })}>⬇ Lower −5 cm</ToolBtn>
-          </PaletteGroup>
-
-          <PaletteGroup label="Plants">
-            <div className="grid grid-cols-5 gap-1 lg:grid-cols-4">
-              {plants.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  title={p.commonName}
-                  aria-pressed={tool.t === "plant" && tool.plantId === p.id}
-                  onClick={() => setTool({ t: "plant", plantId: p.id })}
-                  className={`rounded-lg p-1 ${tool.t === "plant" && tool.plantId === p.id ? "bg-[var(--color-canopy)]/30 ring-2 ring-[var(--color-canopy)]" : "bg-white/40 dark:bg-white/5"}`}
-                >
-                  <SpriteImg plant={p} stage="harvest" size={32} />
-                </button>
-              ))}
-            </div>
-          </PaletteGroup>
-
-          <PaletteGroup label="Structures">
-            {(Object.keys(STRUCTURES) as StructureKind[]).map((k) => (
-              <ToolBtn key={k} active={tool.t === "structure" && tool.kind === k} onClick={() => setTool({ t: "structure", kind: k })}>
-                {STRUCTURES[k].glyph} {STRUCTURES[k].label}
-              </ToolBtn>
-            ))}
-          </PaletteGroup>
-
-          <PaletteGroup label="Hardscape">
-            {(Object.keys(HARDSCAPES) as Array<keyof typeof HARDSCAPES>).map((k) => (
-              <ToolBtn key={k} active={tool.t === "hardscape" && tool.kind === k} onClick={() => setTool({ t: "hardscape", kind: k })}>
-                <span className="mr-1 inline-block h-3 w-3 rounded-sm align-middle" style={{ background: HARDSCAPES[k].color }} />
-                {HARDSCAPES[k].label}
-              </ToolBtn>
-            ))}
-          </PaletteGroup>
-
-          <PaletteGroup label="Water">
-            {(Object.keys(WATER) as Array<keyof typeof WATER>).map((k) => (
-              <ToolBtn key={k} active={tool.t === "water" && tool.kind === k} onClick={() => setTool({ t: "water", kind: k })}>
-                {WATER[k].glyph} {WATER[k].label}
-              </ToolBtn>
-            ))}
-          </PaletteGroup>
-        </aside>
+        <DesignerPalette plants={plants} tool={tool} setTool={setTool} />
 
         {/* canvas + inspector */}
         <div className="order-1 min-w-0 flex-1 lg:order-2">
@@ -461,28 +411,6 @@ function toolLabel(tool: Tool, plantsById: Map<string, { commonName: string }>):
     case "hardscape": return HARDSCAPES[tool.kind].label;
     case "water": return WATER[tool.kind].label;
   }
-}
-
-function PaletteGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="min-w-44 rounded-xl border border-[var(--color-paper-deep)] bg-white/40 p-2 dark:bg-white/5">
-      <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">{label}</p>
-      <div className="flex flex-col gap-1">{children}</div>
-    </div>
-  );
-}
-
-function ToolBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={`rounded-lg px-2 py-1 text-left text-xs font-medium ${active ? "bg-[var(--color-canopy)] text-white" : "bg-white/40 hover:bg-[var(--color-paper-deep)]/60 dark:bg-white/5"}`}
-    >
-      {children}
-    </button>
-  );
 }
 
 function AreaConfig({
