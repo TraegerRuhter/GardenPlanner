@@ -367,6 +367,12 @@ function DesignerBody({
                 if (a) a.origin = { x: Math.round(x), y: Math.round(y) };
               })
             }
+            onAreaRotate={(areaId, deg) =>
+              void mutateGarden((g) => {
+                const a = g.areas.find((ar) => ar.id === areaId);
+                if (a) a.rotationDeg = deg;
+              })
+            }
             height={460}
           />
 
@@ -506,7 +512,12 @@ function AreaConfig({
           </select>
         </label>
         <label>Rotation°
-          <input type="number" min={-180} max={180} value={area.rotationDeg} onChange={(e) => onChange({ rotationDeg: clampInt(e.target.value, -180, 180) })} className="mt-1 block w-16 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
+          <div className="mt-1 flex items-center gap-1">
+            <input type="number" value={area.rotationDeg} onChange={(e) => { const v = Number(e.target.value) || 0; onChange({ rotationDeg: v }); }} className="block w-16 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
+            {area.rotationDeg !== 0 && (
+              <button type="button" onClick={() => onChange({ rotationDeg: 0 })} title="Reset rotation" className="rounded bg-[var(--color-paper-deep)] px-1.5 py-1 text-[10px] font-medium">↺</button>
+            )}
+          </div>
         </label>
         {onRemove && (
           <button type="button" onClick={onRemove} className="rounded bg-[var(--color-warn)]/15 px-2 py-1 font-medium text-[var(--color-warn)]">
