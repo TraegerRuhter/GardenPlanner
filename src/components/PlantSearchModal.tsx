@@ -1,8 +1,3 @@
-/**
- * "Search online plants" modal — searches the Perenual API, shows results
- * with preview colors, and imports selected plants into the local catalog.
- */
-
 import { useState } from "react";
 import { searchPlants, getPlantDetail, type PerenualSearchResult } from "../adapters/perenual";
 import { mapPerenualToPlant } from "../adapters/perenualMapper";
@@ -32,9 +27,9 @@ export function PlantSearchModal({
     try {
       const r = await searchPlants(q, apiKey);
       setResults(r);
-      if (r.length === 0) setError("No plants found.");
+      if (r.length === 0) setError("No plants found — try a different search term.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Search failed");
+      setError(e instanceof Error ? e.message : "Search failed — check your API key and try again.");
     } finally {
       setLoading(false);
     }
@@ -58,53 +53,67 @@ export function PlantSearchModal({
       setImported((prev) => new Set(prev).add(result.id));
       onImported();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Import failed");
+      setError(e instanceof Error ? e.message : "Import failed — please try again.");
     } finally {
       setImporting(null);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[10dvh]" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-[8dvh]" onClick={onClose}>
       <div
         className="w-full max-w-lg rounded-2xl bg-[var(--color-paper)] p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold">Search online plants</h2>
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="text-lg font-bold">Search Online Plants</h2>
           <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-sm hover:bg-[var(--color-paper-deep)]">✕</button>
         </div>
+        <p className="mb-4 text-xs text-[var(--color-ink-soft)]">
+          Search the Perenual database to find and add plants to your catalog.
+          Each imported plant gets a procedurally generated sprite.
+        </p>
 
         <form
           onSubmit={(e) => { e.preventDefault(); void doSearch(); }}
           className="mb-4 flex gap-2"
         >
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. black radish, purple basil, lavender…"
-            autoFocus
-            className="flex-1 rounded-lg border border-[var(--color-paper-deep)] bg-white/60 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--color-canopy)] dark:bg-black/20"
-          />
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-soft)]">🔍</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="e.g. black radish, purple basil, lavender…"
+              autoFocus
+              className="w-full rounded-lg border border-[var(--color-paper-deep)] bg-white/60 py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-canopy)] dark:bg-black/20"
+            />
+          </div>
           <button
             type="submit"
             disabled={loading || !query.trim()}
-            className="rounded-lg bg-[var(--color-canopy)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-lg bg-[var(--color-canopy)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:opacity-90"
           >
-            {loading ? "…" : "Search"}
+            {loading ? "Searching…" : "Search"}
           </button>
         </form>
 
         {error && (
-          <p className="mb-3 rounded-lg bg-[var(--color-warn)]/15 px-3 py-2 text-sm text-[var(--color-warn)]">{error}</p>
+          <p className="mb-3 rounded-lg bg-[var(--color-warn)]/10 px-3 py-2 text-sm font-medium text-[var(--color-warn)]">{error}</p>
+        )}
+
+        {results.length > 0 && (
+          <p className="mb-2 text-xs text-[var(--color-ink-soft)]">
+            {results.length} result{results.length !== 1 ? "s" : ""} found
+            {imported.size > 0 && ` · ${imported.size} added to catalog`}
+          </p>
         )}
 
         <div className="max-h-[50dvh] space-y-2 overflow-y-auto">
           {results.map((r) => (
             <div
               key={r.id}
-              className="flex items-center gap-3 rounded-xl border border-[var(--color-paper-deep)] bg-white/40 p-3 dark:bg-white/5"
+              className="flex items-center gap-3 rounded-xl border border-[var(--color-paper-deep)] bg-white/40 p-3 transition-colors hover:border-[var(--color-canopy)]/40 dark:bg-white/5"
             >
               {r.default_image?.thumbnail ? (
                 <img
@@ -124,23 +133,32 @@ export function PlantSearchModal({
                 </p>
               </div>
               {imported.has(r.id) ? (
-                <span className="rounded-lg bg-[var(--color-canopy)]/20 px-3 py-1.5 text-xs font-medium text-[var(--color-canopy)]">Added</span>
+                <span className="rounded-lg bg-[var(--color-canopy)]/15 px-3 py-1.5 text-xs font-medium text-[var(--color-canopy)]">
+                  ✓ Added
+                </span>
               ) : (
                 <button
                   type="button"
                   disabled={importing === r.id}
                   onClick={() => void doImport(r)}
-                  className="shrink-0 rounded-lg bg-[var(--color-canopy)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                  className="shrink-0 rounded-lg bg-[var(--color-canopy)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 hover:opacity-90"
                 >
-                  {importing === r.id ? "…" : "+ Add"}
+                  {importing === r.id ? "Adding…" : "+ Add to Catalog"}
                 </button>
               )}
             </div>
           ))}
         </div>
 
+        {results.length === 0 && !loading && !error && (
+          <div className="py-8 text-center text-[var(--color-ink-soft)]">
+            <p className="text-lg">🌿</p>
+            <p className="mt-1 text-sm">Search for a plant to get started</p>
+          </div>
+        )}
+
         <p className="mt-3 text-center text-[10px] text-[var(--color-ink-soft)]">
-          Plant data from Perenual · sprites generated from plant colors
+          Plant data from Perenual · sprites are procedurally generated from plant colors
         </p>
       </div>
     </div>
