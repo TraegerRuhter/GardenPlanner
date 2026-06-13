@@ -5,6 +5,7 @@ import { AppShell } from "./shell/AppShell";
 import { useAppStore } from "./store/appStore";
 import { useApplyTheme } from "./lib/useApplyTheme";
 import { db } from "./db/db";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import {
   CalendarPage,
   EncyclopediaPage,
@@ -51,23 +52,25 @@ export default function App() {
 
   return (
     <BrowserRouter basename={basename}>
-      <Suspense fallback={<div className="p-6 text-[var(--color-ink-soft)]">Loading…</div>}>
-        <Routes>
-          <Route element={<AppShell />}>
-            <Route index element={<LandingRedirect />} />
-            <Route path="/encyclopedia" element={<EncyclopediaPage />} />
-            <Route path="/encyclopedia/:plantId" element={<PlantDetailPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/designer" element={<DesignerPage />} />
-            <Route path="/tracker" element={<TrackerPage />} />
-            <Route path="/plant-next" element={<PlantNextPage />} />
-            <Route path="/suggest" element={<SuggestPage />} />
-            <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<LandingRedirect />} />
-          </Route>
-        </Routes>
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={<div className="p-6 text-[var(--color-ink-soft)]">Loading…</div>}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route index element={<LandingRedirect />} />
+              <Route path="/encyclopedia" element={<EncyclopediaPage />} />
+              <Route path="/encyclopedia/:plantId" element={<PlantDetailPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/designer" element={<DesignerPage />} />
+              <Route path="/tracker" element={<TrackerPage />} />
+              <Route path="/plant-next" element={<PlantNextPage />} />
+              <Route path="/suggest" element={<SuggestPage />} />
+              <Route path="/tasks" element={<TasksPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="*" element={<LandingRedirect />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
