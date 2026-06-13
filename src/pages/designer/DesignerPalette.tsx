@@ -76,6 +76,43 @@ interface PanelDef {
   render: () => React.ReactNode;
 }
 
+export function CanvasToolbar({ tool, setTool }: { tool: Tool; setTool: (t: Tool) => void }) {
+  const tools: { t: Tool; label: string; icon: string }[] = [
+    { t: { t: "select" }, label: "Select", icon: "👆" },
+    { t: { t: "erase" }, label: "Erase", icon: "🧹" },
+    { t: { t: "elev_up" }, label: "+5 cm", icon: "⬆" },
+    { t: { t: "elev_down" }, label: "−5 cm", icon: "⬇" },
+  ];
+
+  return (
+    <div
+      className="mb-2 flex items-center gap-1 rounded-xl border border-[var(--color-paper-deep)] bg-white/60 p-1 backdrop-blur-sm dark:bg-black/40"
+      role="toolbar"
+      aria-label="Tile tools"
+    >
+      {tools.map((item) => {
+        const active = tool.t === item.t.t;
+        return (
+          <button
+            key={item.t.t}
+            type="button"
+            aria-pressed={active}
+            onClick={() => setTool(item.t)}
+            title={item.label}
+            className={`rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap ${
+              active
+                ? "bg-[var(--color-canopy)] text-white"
+                : "hover:bg-[var(--color-paper-deep)]/60"
+            }`}
+          >
+            {item.icon} {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function DesignerPalette({
   plants,
   tool,
@@ -86,19 +123,6 @@ export function DesignerPalette({
   setTool: (t: Tool) => void;
 }) {
   const panels: PanelDef[] = [
-    {
-      id: "tools",
-      label: "Tools",
-      count: 4,
-      render: () => (
-        <div className="flex flex-col gap-1">
-          <ToolBtn active={tool.t === "select"} onClick={() => setTool({ t: "select" })}>👆 Select Tile</ToolBtn>
-          <ToolBtn active={tool.t === "erase"} onClick={() => setTool({ t: "erase" })}>🧹 Erase Tile</ToolBtn>
-          <ToolBtn active={tool.t === "elev_up"} onClick={() => setTool({ t: "elev_up" })}>⬆ Raise +5 cm</ToolBtn>
-          <ToolBtn active={tool.t === "elev_down"} onClick={() => setTool({ t: "elev_down" })}>⬇ Lower −5 cm</ToolBtn>
-        </div>
-      ),
-    },
     {
       id: "plants",
       label: "Plants",

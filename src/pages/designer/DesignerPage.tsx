@@ -36,7 +36,7 @@ import { getActiveClimate } from "../../db/climateRepo";
 import { activateInstance } from "../../db/instancesRepo";
 import { todayISO } from "../../lib/dates";
 import { GardenCanvas } from "./GardenCanvas";
-import { DesignerPalette } from "./DesignerPalette";
+import { CanvasToolbar, DesignerPalette } from "./DesignerPalette";
 import { MirrorTable } from "./MirrorTable";
 import { mirrorRows } from "./mirrorRows";
 import { HARDSCAPES, STRUCTURES, TILE_PX, WATER, type Tool } from "./palette";
@@ -307,6 +307,7 @@ function DesignerBody({
 
         {/* canvas + inspector */}
         <div className="order-1 min-w-0 flex-1 lg:order-2">
+          <CanvasToolbar tool={tool} setTool={setTool} />
           <GardenCanvas
             garden={garden}
             instances={instances}
