@@ -70,7 +70,7 @@ notifications via SW (§19) · Playwright smoke flows · sync backend stub,
 | §7.12 | Default units | imperial (display only) | storage always metric (§0) |
 | §22 | SW updates | `autoUpdate` | switches to prompt+toast when the toast UI lands |
 | schema | `tasks.done` not indexed | IDB can't index booleans | query by `dueOn` range |
-| repo | App in `garden-planner/` | | keeps the PWA clear of the PyCitySchools coursework at repo root |
+| repo | Standalone repo | | independent repository for the Garden Planner PWA |
 
 ## Layout
 
