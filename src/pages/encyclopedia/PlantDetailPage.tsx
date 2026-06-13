@@ -65,19 +65,19 @@ export function PlantDetailPage() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-6">
       <Link to="/encyclopedia" className="text-sm text-[var(--color-ink-soft)] hover:underline">
-        ← Encyclopedia
+        ← Back to Plant Encyclopedia
       </Link>
 
-      <header className="mt-2 mb-4 flex items-center gap-4">
+      <header className="mt-3 mb-5 flex items-center gap-4">
         <button
           type="button"
           onClick={() => setShowCustomizer(true)}
-          title="Customize sprite"
-          className="group relative shrink-0 cursor-pointer rounded-xl p-1 hover:bg-[var(--color-paper-deep)]"
+          title="Click to customize sprite colors and shape"
+          className="group relative shrink-0 cursor-pointer rounded-xl p-1.5 hover:bg-[var(--color-paper-deep)]"
         >
           <SpriteImg plant={plant} stage="harvest" size={80} />
-          <span className="absolute inset-x-0 bottom-0 rounded-b-xl bg-black/50 py-0.5 text-center text-[9px] font-medium text-white opacity-0 group-hover:opacity-100">
-            edit
+          <span className="absolute inset-x-0 bottom-0 rounded-b-xl bg-black/60 py-1 text-center text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+            ✏️ Customize
           </span>
         </button>
         {showCustomizer && (
@@ -225,7 +225,7 @@ export function PlantDetailPage() {
 
       {tab === "Varieties" &&
         (varietals.length === 0 ? (
-          <Pad>No varietals on file.</Pad>
+          <Pad>No varietals recorded for this plant yet.</Pad>
         ) : (
           <ul className="space-y-2">
             {varietals.map((v) => (
@@ -259,7 +259,7 @@ export function PlantDetailPage() {
 
       {tab === "Recipes" &&
         (recipes.length === 0 ? (
-          <Pad>No recipes on file.</Pad>
+          <Pad>No recipes recorded for this plant yet.</Pad>
         ) : (
           <ul className="space-y-3">
             {recipes.map((r) => (
@@ -297,7 +297,7 @@ export function PlantDetailPage() {
 
       {tab === "Companions" &&
         (companions.length === 0 ? (
-          <Pad>No companion data on file.</Pad>
+          <Pad>No companion planting data recorded for this plant yet.</Pad>
         ) : (
           <ul className="space-y-2">
             {companions.map(({ rel, partner }) =>

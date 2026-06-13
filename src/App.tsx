@@ -32,16 +32,25 @@ export default function App() {
 
   if (bootState === "loading") {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[var(--color-paper)] text-[var(--color-ink-soft)]">
-        Preparing the garden…
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[var(--color-paper)]">
+        <span className="text-2xl font-bold tracking-wide text-[var(--color-canopy)]">PLOT</span>
+        <span className="text-sm text-[var(--color-ink-soft)]">Preparing your garden…</span>
       </div>
     );
   }
   if (bootState === "error") {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-[var(--color-paper)] p-6 text-center">
-        <p className="font-semibold">Couldn't open local storage.</p>
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[var(--color-paper)] p-6 text-center">
+        <span className="text-2xl font-bold tracking-wide text-[var(--color-canopy)]">PLOT</span>
+        <p className="font-semibold text-[var(--color-warn)]">Unable to open local storage</p>
         <p className="max-w-md text-sm text-[var(--color-ink-soft)]">{bootError}</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-2 rounded-lg bg-[var(--color-canopy)] px-4 py-2 text-sm font-medium text-white"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -53,7 +62,7 @@ export default function App() {
   return (
     <BrowserRouter basename={basename}>
       <ErrorBoundary>
-        <Suspense fallback={<div className="p-6 text-[var(--color-ink-soft)]">Loading…</div>}>
+        <Suspense fallback={<div className="flex items-center justify-center p-12 text-sm text-[var(--color-ink-soft)]">Loading page…</div>}>
           <Routes>
             <Route element={<AppShell />}>
               <Route index element={<LandingRedirect />} />
