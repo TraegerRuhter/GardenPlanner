@@ -37,7 +37,10 @@ export function CalendarPage() {
   if (!climate || editing) {
     return (
       <section className="mx-auto max-w-2xl px-4 py-6">
-        <h1 className="mb-4 text-2xl font-bold">Calendar</h1>
+        <h1 className="mb-1 text-2xl font-bold">Planting Calendar</h1>
+        <p className="mb-4 text-sm text-[var(--color-ink-soft)]">
+          Set your location so we can calculate frost dates and planting windows.
+        </p>
         <LocationSetup
           onDone={() => {
             setEditing(false);
@@ -62,7 +65,7 @@ export function CalendarPage() {
   return (
     <section className="mx-auto max-w-5xl px-4 py-6">
       <div className="mb-1 flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-bold">Calendar</h1>
+        <h1 className="text-2xl font-bold">Planting Calendar</h1>
         <span className="text-sm text-[var(--color-ink-soft)]">{location.label}</span>
         {profile.hardinessZone && <Badge tone={badgeTone.good}>zone {profile.hardinessZone}</Badge>}
         <button
@@ -70,27 +73,33 @@ export function CalendarPage() {
           onClick={() => setEditing(true)}
           className="ml-auto rounded-md bg-[var(--color-paper-deep)] px-2 py-1 text-xs font-medium"
         >
-          Change location
+          Edit Location
         </button>
       </div>
-      <p className="mb-4 text-xs text-[var(--color-ink-soft)]">
-        Median frost: last spring {formatShort(inYear(profile.lastSpringFrost.p50, year))}, first
-        fall {formatShort(inYear(profile.firstFallFrost.p50, year))}
-        {" · "}frost-safe (10% risk): {formatShort(inYear(profile.lastSpringFrost.p10, year))} /{" "}
-        {formatShort(inYear(profile.firstFallFrost.p10, year))}
-        {profile.frostFreeDays ? ` · ${profile.frostFreeDays} frost-free days` : ""}
-        {profile.derivedFrom === "manual" ? " · entered manually" : " · derived from 10y history"}
-        {profile.microclimateNotes ? ` · ${profile.microclimateNotes}` : ""}
-      </p>
+      <div className="mb-4 rounded-lg border border-[var(--color-paper-deep)] bg-white/30 p-2.5 text-xs text-[var(--color-ink-soft)] dark:bg-white/5">
+        <p>
+          <span className="font-medium text-[var(--color-ink)]">Frost Dates:</span>{" "}
+          Last spring frost: {formatShort(inYear(profile.lastSpringFrost.p50, year))}{" "}
+          · First fall frost: {formatShort(inYear(profile.firstFallFrost.p50, year))}
+          {profile.frostFreeDays ? ` · ${profile.frostFreeDays} frost-free days` : ""}
+        </p>
+        <p className="mt-0.5">
+          <span className="font-medium text-[var(--color-ink)]">Safe Dates (10% risk):</span>{" "}
+          {formatShort(inYear(profile.lastSpringFrost.p10, year))} / {formatShort(inYear(profile.firstFallFrost.p10, year))}
+          {profile.derivedFrom === "manual" ? " · Entered manually" : " · From 10-year history"}
+          {profile.microclimateNotes ? ` · ${profile.microclimateNotes}` : ""}
+        </p>
+      </div>
 
-      <div className="mb-4 flex flex-wrap gap-1" role="group" aria-label="Plants shown">
+      <p className="mb-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">Filter by Plant</p>
+      <div className="mb-4 flex flex-wrap gap-1" role="group" aria-label="Filter plants">
         <button
           type="button"
           onClick={() => setSelectedPlants(null)}
           aria-pressed={selectedPlants === null}
           className={chipClass(selectedPlants === null)}
         >
-          All
+          Show All
         </button>
         {plants.map((p) => (
           <button
@@ -113,7 +122,7 @@ export function CalendarPage() {
       </div>
 
       {rows.length === 0 ? (
-        <Pad>No plants selected.</Pad>
+        <Pad>No plants selected — choose plants above to see their planting windows.</Pad>
       ) : (
         <WindowChart rows={rows} climate={profile} year={year} hemisphere={hemisphere} />
       )}
