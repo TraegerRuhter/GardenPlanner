@@ -178,6 +178,130 @@ const SHARED_DORMANT: PixelMap = withSoil([
   "......ww........",
 ]);
 
+// Native 32×32 versions of the lifecycle-edge stages. Shared across every
+// shape so the whole plant lifecycle renders at a single, crisp resolution
+// (planted is the first stage every plant shows). Centered on the tile.
+const SHARED_PLANTED_32: PixelMap = withSoil32(r32([
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "...............ww",
+  "..............wwww",
+  "..............wwww",
+]));
+
+const SHARED_GERMINATION_32: PixelMap = withSoil32(r32([
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "..............ll",
+  ".............llll",
+  "..............ll",
+  "...............ss",
+  "...............ss",
+  "...............ss",
+]));
+
+const SHARED_SENESCENCE_32: PixelMap = withSoil32(r32([
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "..............yy..yy",
+  ".............yyyyyyyy",
+  "............yy.yyyy.y",
+  ".............yyyyyyyy",
+  ".............y.yyyyy",
+  "..............yyyyyy",
+  "...............yyyy",
+  "...............yy",
+  "...............yy",
+  "...............yy",
+  "...............yy",
+  "...............yy",
+]));
+
+const SHARED_DORMANT_32: PixelMap = withSoil32(r32([
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "..............w",
+  ".........w....w...w",
+  "..........w..w..w",
+  "...........w.w.w",
+  "............www",
+  ".........w..w..w",
+  "..........w.w.w",
+  "...........www",
+  "............ww",
+  "..............ww",
+  "..............ww",
+  "..............ww",
+  "..............ww",
+]));
+
+/** Shared lifecycle-edge stages, layered over every shape's upscaled base. */
+const SHARED_32: Partial<Record<StageKey, PixelMap>> = {
+  planted: SHARED_PLANTED_32,
+  germination: SHARED_GERMINATION_32,
+  senescence: SHARED_SENESCENCE_32,
+  dormant: SHARED_DORMANT_32,
+};
+
+/** Upscaled legacy base for a shape, with crisp shared edge stages layered on. */
+function baseStages(shape: Record<StageKey, PixelMap>): Record<StageKey, PixelMap> {
+  return { ...upscaleShape(shape), ...SHARED_32 };
+}
+
 // ===== BUSH (default — round bushy shape) =====
 const BUSH: Record<StageKey, PixelMap> = {
   planted: SHARED_PLANTED,
@@ -4719,7 +4843,7 @@ const BERRY_32_HARVEST: PixelMap = withSoil32(r32([
 /** All shape families keyed by SpriteShape, at 32×32 resolution. */
 export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
   bush: {
-    ...upscaleShape(BUSH),
+    ...baseStages(BUSH),
     sprout: BUSH_32_SPROUT,
     seedling: BUSH_32_SEEDLING,
     vegetative: BUSH_32_VEGETATIVE,
@@ -4729,7 +4853,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: BUSH_32_HARVEST,
   },
   root: {
-    ...upscaleShape(ROOT),
+    ...baseStages(ROOT),
     sprout: ROOT_32_SPROUT,
     seedling: ROOT_32_SEEDLING,
     vegetative: ROOT_32_VEGETATIVE,
@@ -4739,7 +4863,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: ROOT_32_HARVEST,
   },
   vine: {
-    ...upscaleShape(VINE),
+    ...baseStages(VINE),
     sprout: VINE_32_SPROUT,
     seedling: VINE_32_SEEDLING,
     vegetative: VINE_32_VEGETATIVE,
@@ -4749,7 +4873,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: VINE_32_HARVEST,
   },
   tall: {
-    ...upscaleShape(TALL),
+    ...baseStages(TALL),
     sprout: TALL_32_SPROUT,
     seedling: TALL_32_SEEDLING,
     vegetative: TALL_32_VEGETATIVE,
@@ -4759,7 +4883,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: TALL_32_HARVEST,
   },
   leafy: {
-    ...upscaleShape(LEAFY),
+    ...baseStages(LEAFY),
     sprout: LEAFY_32_SPROUT,
     seedling: LEAFY_32_SEEDLING,
     vegetative: LEAFY_32_VEGETATIVE,
@@ -4769,7 +4893,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: LEAFY_32_HARVEST,
   },
   herb: {
-    ...upscaleShape(HERB),
+    ...baseStages(HERB),
     sprout: HERB_32_SPROUT,
     seedling: HERB_32_SEEDLING,
     vegetative: HERB_32_VEGETATIVE,
@@ -4779,7 +4903,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: HERB_32_HARVEST,
   },
   flower: {
-    ...upscaleShape(FLOWER),
+    ...baseStages(FLOWER),
     sprout: FLOWER_32_SPROUT,
     seedling: FLOWER_32_SEEDLING,
     vegetative: FLOWER_32_VEGETATIVE,
@@ -4789,7 +4913,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: FLOWER_32_HARVEST,
   },
   bulb: {
-    ...upscaleShape(BULB),
+    ...baseStages(BULB),
     sprout: BULB_32_SPROUT,
     seedling: BULB_32_SEEDLING,
     vegetative: BULB_32_VEGETATIVE,
@@ -4799,7 +4923,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: BULB_32_HARVEST,
   },
   climbing: {
-    ...upscaleShape(CLIMBING),
+    ...baseStages(CLIMBING),
     sprout: CLIMBING_32_SPROUT,
     seedling: CLIMBING_32_SEEDLING,
     vegetative: CLIMBING_32_VEGETATIVE,
@@ -4809,7 +4933,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: CLIMBING_32_HARVEST,
   },
   grass: {
-    ...upscaleShape(GRASS),
+    ...baseStages(GRASS),
     sprout: GRASS_32_SPROUT,
     seedling: GRASS_32_SEEDLING,
     vegetative: GRASS_32_VEGETATIVE,
@@ -4819,7 +4943,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: GRASS_32_HARVEST,
   },
   cob: {
-    ...upscaleShape(COB),
+    ...baseStages(COB),
     sprout: COB_32_SPROUT,
     seedling: COB_32_SEEDLING,
     vegetative: COB_32_VEGETATIVE,
@@ -4829,7 +4953,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: COB_32_HARVEST,
   },
   head: {
-    ...upscaleShape(HEAD),
+    ...baseStages(HEAD),
     sprout: HEAD_32_SPROUT,
     seedling: HEAD_32_SEEDLING,
     vegetative: HEAD_32_VEGETATIVE,
@@ -4839,7 +4963,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: HEAD_32_HARVEST,
   },
   gourd: {
-    ...upscaleShape(GOURD),
+    ...baseStages(GOURD),
     sprout: GOURD_32_SPROUT,
     seedling: GOURD_32_SEEDLING,
     vegetative: GOURD_32_VEGETATIVE,
@@ -4849,7 +4973,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: GOURD_32_HARVEST,
   },
   crown: {
-    ...upscaleShape(CROWN),
+    ...baseStages(CROWN),
     sprout: CROWN_32_SPROUT,
     seedling: CROWN_32_SEEDLING,
     vegetative: CROWN_32_VEGETATIVE,
@@ -4859,7 +4983,7 @@ export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
     harvest: CROWN_32_HARVEST,
   },
   berry: {
-    ...upscaleShape(BERRY),
+    ...baseStages(BERRY),
     sprout: BERRY_32_SPROUT,
     seedling: BERRY_32_SEEDLING,
     vegetative: BERRY_32_VEGETATIVE,
@@ -4877,7 +5001,7 @@ export const ROOT_STAGE_MAPS: Partial<Record<StageKey, PixelMap>> = {
   harvest: ROOT.harvest,
 };
 
-/** Maps must stay 16×16 and only use palette slots; verified by tests. */
+/** Rendered maps are 32×32 and may only use palette slots; verified by tests. */
 export const PALETTE_SLOTS = new Set([
   ".",
   "m",
