@@ -3046,7 +3046,7 @@ const BULB_32_VEGETATIVE: PixelMap = withSoil32(r32([
   "............ll",
   "............lssl",
   "............lssl",
-  ".............ss",
+  "............lssl",
   ".............ss",
   ".............ss",
 ]));
@@ -3069,8 +3069,8 @@ const BULB_32_BUDDING: PixelMap = withSoil32(r32([
   ".........ll..ll",
   "..........llll",
   "...........ll",
-  "............ss",
-  "............ss",
+  "...........lssl",
+  "...........lssl",
   "...........ffss",
   "..........ffffss",
   "..........fffff",
@@ -3646,7 +3646,7 @@ const LEAFY_32_BUDDING: PixelMap = withSoil32(r32([
   ".........lllssllll",
   "..........llssll",
   "...........lssl",
-  "............ss",
+  "...........lssl",
   "............ss",
   "............ss",
 ]));
@@ -3673,7 +3673,7 @@ const LEAFY_32_FLOWERING: PixelMap = withSoil32(r32([
   ".........lllssllll",
   "..........llssll",
   "...........lssl",
-  "............ss",
+  "...........lssl",
   "............ss",
   "............ss",
 ]));
