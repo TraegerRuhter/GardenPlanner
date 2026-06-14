@@ -72,7 +72,7 @@ function upscale2x(map: PixelMap): PixelMap {
 }
 
 function upscaleShape(shape: Record<StageKey, PixelMap>): Record<StageKey, PixelMap> {
-  return Object.fromEntries(Object.entries(shape).map(([k, v]) => [k, upscale2x(v)])) as Record<
+  return Object.fromEntries(Object.entries(shape).map(([k, v]) => [k, grounded(upscale2x(v))])) as Record<
     StageKey,
     PixelMap
   >;
@@ -90,11 +90,31 @@ const SOIL_32 = [
 ] as const;
 
 function withSoil32(top: readonly string[]): PixelMap {
-  return [...top, ...SOIL_32];
+  return grounded([...top, ...SOIL_32]);
 }
 
 function r32(rows: string[]): string[] {
   return rows.map((r) => r.padEnd(32, "."));
+}
+
+function grounded(map: PixelMap): PixelMap {
+  const soilStart = map.length - 8;
+  let lastStem = -1;
+  for (let r = soilStart - 1; r >= 0; r--) {
+    if (/[slLfFywm]/i.test(map[r].replace(/\./g, ""))) {
+      lastStem = r;
+      break;
+    }
+  }
+  if (lastStem < 0 || lastStem >= soilStart - 1) return map;
+  const row = map[lastStem];
+  const stemOnly = [...row].map((c) => (c === "s" || c === "w" ? c : ".")).join("");
+  if (stemOnly.replace(/\./g, "").length === 0) return map;
+  const result = [...map];
+  for (let r = lastStem + 1; r < soilStart; r++) {
+    result[r] = stemOnly;
+  }
+  return result;
 }
 
 // Shared early stages — planted/germination look the same for all shapes
@@ -2119,6 +2139,10 @@ const ROOT_32_BUDDING: PixelMap = withSoil32(r32([
   "",
   "",
   "",
+  "",
+  "",
+  "",
+  "",
   "........ll..........ll",
   ".......llll........llll",
   "......lllll........lllll",
@@ -2128,16 +2152,12 @@ const ROOT_32_BUDDING: PixelMap = withSoil32(r32([
   "..............ss",
   "..............ss",
   "..............ss",
+  "..............ss",
+  "..............ss",
+  "..............ss",
   ".............ffff",
   "..............ff",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
+  "..............ss",
 ]));
 
 const ROOT_32_FLOWERING: PixelMap = withSoil32(r32([
@@ -2145,6 +2165,9 @@ const ROOT_32_FLOWERING: PixelMap = withSoil32(r32([
   "",
   "",
   "",
+  "",
+  "",
+  "",
   "........ll..........ll",
   ".......llll........llll",
   "......lllll........lllll",
@@ -2154,17 +2177,14 @@ const ROOT_32_FLOWERING: PixelMap = withSoil32(r32([
   "..............ss",
   "..............ss",
   "..............ss",
+  "..............ss",
+  "..............ss",
+  "..............ss",
   "............ffffff",
   "............fffFff",
   ".............ffff",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
+  "..............ss",
+  "..............ss",
 ]));
 
 const ROOT_32_FRUITING: PixelMap = withSoil32(r32([
@@ -2172,6 +2192,8 @@ const ROOT_32_FRUITING: PixelMap = withSoil32(r32([
   "",
   "",
   "",
+  "",
+  "",
   "........ll..........ll",
   ".......llll........llll",
   "......lllll........lllll",
@@ -2180,18 +2202,16 @@ const ROOT_32_FRUITING: PixelMap = withSoil32(r32([
   "...........ssss",
   "..............ss",
   "..............ss",
+  "..............ss",
+  "..............ss",
+  "..............ss",
   ".............ffff",
   "............ffffff",
   "............fffFff",
   ".............ffFf",
   "..............ff",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
+  "..............ss",
+  "..............ss",
 ]));
 
 const ROOT_32_HARVEST: PixelMap = withSoil32(r32([
@@ -2206,6 +2226,9 @@ const ROOT_32_HARVEST: PixelMap = withSoil32(r32([
   "..........llssll",
   "...........ssss",
   "..............ss",
+  "..............ss",
+  "..............ss",
+  "..............ss",
   "............ffffff",
   "...........ffffffff",
   "...........ffFfffFf",
@@ -2214,11 +2237,8 @@ const ROOT_32_HARVEST: PixelMap = withSoil32(r32([
   ".............fffff",
   "..............fff",
   "...............f",
-  "",
-  "",
-  "",
-  "",
-  "",
+  "..............ss",
+  "..............ss",
 ]));
 
 // --- VINE 32×32 hand-crafted (3/10) ---
@@ -2887,6 +2907,9 @@ const BULB_32_BUDDING: PixelMap = withSoil32(r32([
   "",
   "",
   "",
+  "",
+  "",
+  "",
   ".............l",
   "............ll",
   ".............l",
@@ -2896,12 +2919,9 @@ const BULB_32_BUDDING: PixelMap = withSoil32(r32([
   ".............l",
   ".............s",
   "............ss",
+  "............ss",
   "............ff",
   "............ff",
-  "",
-  "",
-  "",
-  "",
 ]));
 
 const BULB_32_FLOWERING: PixelMap = withSoil32(r32([
@@ -2914,6 +2934,8 @@ const BULB_32_FLOWERING: PixelMap = withSoil32(r32([
   "",
   "",
   "",
+  "",
+  "",
   ".............l",
   "............ll",
   ".............l",
@@ -2922,13 +2944,11 @@ const BULB_32_FLOWERING: PixelMap = withSoil32(r32([
   "............ll",
   ".............l",
   ".............s",
+  "............ss",
   "...........ffs",
   "..........fffff",
   "...........fff",
-  "",
-  "",
-  "",
-  "",
+  "............ss",
 ]));
 
 const BULB_32_FRUITING: PixelMap = withSoil32(r32([
@@ -2941,6 +2961,7 @@ const BULB_32_FRUITING: PixelMap = withSoil32(r32([
   "",
   "",
   "",
+  "",
   ".............l",
   "............ll",
   ".............l",
@@ -2948,14 +2969,13 @@ const BULB_32_FRUITING: PixelMap = withSoil32(r32([
   ".............l",
   "............ll",
   ".............s",
+  "............ss",
   "..........fffs",
   ".........ffffff",
   ".........fffFff",
   "..........ffff",
-  "",
-  "",
-  "",
-  "",
+  "...........ss",
+  "...........ss",
 ]));
 
 const BULB_32_HARVEST: PixelMap = withSoil32(r32([
@@ -2967,6 +2987,7 @@ const BULB_32_HARVEST: PixelMap = withSoil32(r32([
   "",
   "",
   "",
+  "",
   ".............l",
   "............ll",
   ".............l",
@@ -2974,15 +2995,14 @@ const BULB_32_HARVEST: PixelMap = withSoil32(r32([
   ".............l",
   "............ll",
   ".............s",
+  "............ss",
   "........fffff",
   ".......ffffffff",
   ".......ffffFfff",
   "........ffffff",
   ".........ffff",
-  "",
-  "",
-  "",
-  "",
+  "..........ss",
+  "..........ss",
 ]));
 
 // --- FLOWER 32×32 hand-crafted (7/10) ---
@@ -3525,10 +3545,10 @@ const LEAFY_32_FRUITING: PixelMap = withSoil32(r32([
   "..........lllllll",
   "...........lllll",
   "............lll",
-  "",
-  "",
-  "",
-  "",
+  ".............ss",
+  ".............ss",
+  ".............ss",
+  ".............ss",
 ]));
 
 const LEAFY_32_HARVEST: PixelMap = withSoil32(r32([
@@ -3552,10 +3572,10 @@ const LEAFY_32_HARVEST: PixelMap = withSoil32(r32([
   "........llllllllll",
   "..........lllllll",
   "............lll",
-  "",
-  "",
-  "",
-  "",
+  ".............ss",
+  ".............ss",
+  ".............ss",
+  ".............ss",
 ]));
 
 // --- TALL 32×32 hand-crafted (4/10) ---
@@ -3878,12 +3898,12 @@ const GOURD_32_FRUITING: PixelMap = withSoil32(r32([
   "..........fffff",
   "..............s",
   "..............s",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
+  "..............s",
+  "..............s",
+  "..............s",
+  "..............s",
+  "..............s",
+  "..............s",
 ]));
 
 const GOURD_32_HARVEST: PixelMap = withSoil32(r32([
@@ -3904,13 +3924,13 @@ const GOURD_32_HARVEST: PixelMap = withSoil32(r32([
   ".......fFfffffffffFf",
   "........fFfffffFf",
   ".........fffffff",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
+  "..............s",
+  "..............s",
+  "..............s",
+  "..............s",
+  "..............s",
+  "..............s",
+  "..............s",
 ]));
 
 const CROWN_32_FRUITING: PixelMap = withSoil32(r32([
