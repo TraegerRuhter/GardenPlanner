@@ -89,8 +89,38 @@ const SOIL_32 = [
   "................................",
 ] as const;
 
+/**
+ * Horizontally center a map's plant content on the tile (col 15.5). Authoring
+ * by hand tends to drift left; this guarantees every plant sits over the
+ * centered soil mound without hand-tuning each of ~150 stage maps. Shifts are
+ * clamped so content never leaves the 32-wide grid.
+ */
+function centerCols(rows: readonly string[]): string[] {
+  let min = 32;
+  let max = -1;
+  for (const row of rows) {
+    for (let c = 0; c < row.length; c++) {
+      if (row[c] !== ".") {
+        if (c < min) min = c;
+        if (c > max) max = c;
+      }
+    }
+  }
+  const padded = rows.map((r) => r.padEnd(32, ".").slice(0, 32));
+  if (max < 0) return padded;
+  let shift = Math.round(15.5 - (min + max) / 2);
+  if (min + shift < 0) shift = -min;
+  if (max + shift > 31) shift = 31 - max;
+  if (shift === 0) return padded;
+  return padded.map((row) =>
+    shift > 0
+      ? (".".repeat(shift) + row).slice(0, 32)
+      : (row.slice(-shift) + ".".repeat(-shift)).slice(0, 32),
+  );
+}
+
 function withSoil32(top: readonly string[]): PixelMap {
-  return grounded([...top, ...SOIL_32]);
+  return grounded([...centerCols(top), ...SOIL_32]);
 }
 
 function r32(rows: string[]): string[] {
