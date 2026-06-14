@@ -34,4 +34,4 @@ export { recipes } from "./recipes";
 export { diagnostics } from "./diagnostics";
 
 /** Bump whenever bundled catalog content changes; drives re-seeding. */
-export const CATALOG_VERSION = 9;
+export const CATALOG_VERSION = 10;
