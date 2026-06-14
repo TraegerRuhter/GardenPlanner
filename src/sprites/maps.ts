@@ -2309,6 +2309,264 @@ export const PLANT_MAPS: Record<string, Partial<Record<StageKey, PixelMap>>> = {
       "................",
     ]),
   },
+
+  // BUSH_BEAN — bush with elongated pod clusters
+  bush_bean: {
+    fruiting: withSoil([
+      "......llll......",
+      "....llllllll....",
+      "...lllLllllll...",
+      "..lllLllllLlll..",
+      "..llllllllllll..",
+      ".lllLllssllLlll.",
+      ".lllllsssslllll.",
+      "..lllLssssLlll..",
+      "...llffsslll....",
+      "....lffsslffl...",
+      ".....lfff.lff...",
+      ".......ss.......",
+    ]),
+    harvest: withSoil([
+      "......llll......",
+      "....llllllll....",
+      "...lllLllllll...",
+      "..lllLllllLlll..",
+      "..llfflllllffll.",
+      ".lllfflssllffll.",
+      ".llfflsssslffll.",
+      "..lffLssssLffl..",
+      "...lfffsslfffl..",
+      "....lffsslff....",
+      "....lfff.lfff...",
+      ".......ss.......",
+    ]),
+  },
+
+  // SNAP_PEA — climbing with flat pods
+  snap_pea: {
+    fruiting: withSoil([
+      "......ww........",
+      "......ww........",
+      "......wwl.......",
+      "......wlfl......",
+      "......wlffl.....",
+      "......wsl.......",
+      "......wsl.......",
+      "......wlfl......",
+      "......wlffl.....",
+      "......wsl.......",
+      "......ws........",
+      "......ws........",
+    ]),
+    harvest: withSoil([
+      "......ww........",
+      "......ww........",
+      "......wwl.......",
+      "......wlffl.....",
+      "......wlfffl....",
+      "......wslffl....",
+      "......wsl.......",
+      "......wlffl.....",
+      "......wlfffl....",
+      "......wslffl....",
+      "......ws........",
+      "......ws........",
+    ]),
+  },
+
+  // SPINACH — dark compact rosette
+  spinach: {
+    harvest: withSoil([
+      "................",
+      "................",
+      "......ll........",
+      "....l.ll.ll.....",
+      "..llllllllll....",
+      ".llLllLlllLlll..",
+      ".lLlllllllLlll..",
+      "..llLlLlLllll...",
+      "...lllllllll....",
+      "....llssll......",
+      "......ss........",
+      "......ss........",
+    ]),
+  },
+
+  // CANTALOUPE — netted melon pattern
+  cantaloupe: {
+    harvest: withSoil([
+      "................",
+      "..l.............",
+      "..lll...........",
+      "...llll.........",
+      "....llls........",
+      "......lls.......",
+      "...fFffFff......",
+      "..fFffffFfF.....",
+      "..ffFffffFffs...",
+      "..fFffffFfF.....",
+      "...fFffFff......",
+      "................",
+    ]),
+  },
+
+  // OKRA — tall with pointed upward pods
+  okra: {
+    fruiting: withSoil([
+      "......fff.......",
+      ".....fFfFf......",
+      "......ffl.......",
+      ".....llll.......",
+      "......lsfl......",
+      ".....llsl.......",
+      "......lsll......",
+      ".....llsl.......",
+      ".......s........",
+      ".......s........",
+      ".......s........",
+      ".......s........",
+    ]),
+    harvest: withSoil([
+      "......fff.......",
+      ".....fFfFf......",
+      "......ffl.......",
+      ".....llll.......",
+      "....fflsfl......",
+      "....Fflsfl......",
+      "......lsfl......",
+      ".....flslff.....",
+      "....FF.sF.......",
+      ".......s........",
+      ".......s........",
+      ".......s........",
+    ]),
+  },
+
+  // LEEK — tall white shaft with fan top
+  leek: {
+    harvest: withSoil([
+      ".......l........",
+      "......ll........",
+      ".....l.l........",
+      "....ll.ll.......",
+      ".....l.l........",
+      "......ll........",
+      ".......s........",
+      "......ffs.......",
+      ".....fffff......",
+      ".....fffFf......",
+      ".....fffff......",
+      "......fff.......",
+    ]),
+  },
+
+  // TOMATILLO — bush with husked round fruit
+  tomatillo: {
+    harvest: withSoil([
+      "......llll......",
+      "....llllllll....",
+      "...lllLllllll...",
+      "..lllLllllLlll..",
+      ".lllllllllllll..",
+      ".lllLllssllLlll.",
+      ".lllflsssslflll.",
+      "..llffssssffl...",
+      "..llfFfssffFl...",
+      "...llffslffl....",
+      "....llff.lff....",
+      ".......ss.......",
+    ]),
+  },
+
+  // BROCCOLI — green dome floret, more identifiable than generic crown
+  broccoli: {
+    harvest: withSoil([
+      "....fffffff.....",
+      "...fFfFffFff....",
+      "..fffFfFfFfff...",
+      "...fFfFffFff....",
+      "....fffffff.....",
+      "...llllllll.....",
+      "..llllllllll....",
+      "....llllsl......",
+      ".....lsll.......",
+      "......ls........",
+      ".......s........",
+      "................",
+    ]),
+  },
+
+  // CAULIFLOWER — white dome, same layout as broccoli
+  cauliflower: {
+    harvest: withSoil([
+      "....fffffff.....",
+      "...fFfffFfff....",
+      "..fffFffFffff...",
+      "...fFfffFfff....",
+      "....fffffff.....",
+      "...llllllll.....",
+      "..llllllllll....",
+      "....llllsl......",
+      ".....lsll.......",
+      "......ls........",
+      ".......s........",
+      "................",
+    ]),
+  },
+
+  // PARSNIP — tapered cream root, similar to carrot but thicker
+  parsnip: {
+    harvest: withSoil([
+      "....ll....ll....",
+      "...llll..llll...",
+      "..lllll..lllll..",
+      "....lllsslll....",
+      ".....llssll.....",
+      "......ssss......",
+      ".......ss.......",
+      ".....fffff......",
+      "....fffffFf.....",
+      ".....fffff......",
+      "......ffff......",
+      ".......ff.......",
+    ]),
+  },
+
+  // TURNIP — round root with purple top accent
+  turnip: {
+    harvest: withSoil([
+      "....ll....ll....",
+      "...llll..llll...",
+      "..lllll..lllll..",
+      "....lllsslll....",
+      ".....llssll.....",
+      "......ssss......",
+      ".......ss.......",
+      ".....fffff......",
+      "....ffffffF.....",
+      "....fffFFff.....",
+      ".....fffff......",
+      "......fff.......",
+    ]),
+  },
+
+  // DAIKON — long white cylindrical root
+  daikon: {
+    harvest: withSoil([
+      "....ll....ll....",
+      "...llll..llll...",
+      "..lllll..lllll..",
+      "....lllsslll....",
+      ".....llssll.....",
+      "......ssss......",
+      "......ffff......",
+      "......ffFf......",
+      "......ffff......",
+      "......ffFf......",
+      ".......fff......",
+      "........f.......",
+    ]),
+  },
 };
 
 // Keep legacy exports for backwards compatibility
