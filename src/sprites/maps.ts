@@ -13,6 +13,9 @@ import type { StageKey } from "../types/models";
 
 export type PixelMap = readonly string[];
 
+/** Sprite grid resolution — all maps are RES×RES. */
+export const SPRITE_RES = 32;
+
 export type SpriteShape =
   | "bush"
   | "root"
@@ -57,6 +60,41 @@ const SOIL = [
 
 function withSoil(top: readonly string[]): PixelMap {
   return [...top, ...SOIL];
+}
+
+function upscale2x(map: PixelMap): PixelMap {
+  const result: string[] = [];
+  for (const row of map) {
+    const doubled = [...row].map((c) => c + c).join("");
+    result.push(doubled, doubled);
+  }
+  return result;
+}
+
+function upscaleShape(shape: Record<StageKey, PixelMap>): Record<StageKey, PixelMap> {
+  return Object.fromEntries(Object.entries(shape).map(([k, v]) => [k, upscale2x(v)])) as Record<
+    StageKey,
+    PixelMap
+  >;
+}
+
+const SOIL_32 = [
+  "........mmmmmmmmmmmmmmmm........",
+  "........mmmmmmmmmmmmmmmm........",
+  "....mmmmMMMMMMMMMMMMMMMMmmmm....",
+  "....mmmmMMMMMMMMMMMMMMMMmmmm....",
+  "..mmMMMMMMMMMMMMMMMMMMMMMMMMmm..",
+  "..mmMMMMMMMMMMMMMMMMMMMMMMMMmm..",
+  "................................",
+  "................................",
+] as const;
+
+function withSoil32(top: readonly string[]): PixelMap {
+  return [...top, ...SOIL_32];
+}
+
+function r32(rows: string[]): string[] {
+  return rows.map((r) => r.padEnd(32, "."));
 }
 
 // Shared early stages — planted/germination look the same for all shapes
@@ -665,7 +703,7 @@ const LEAFY: Record<StageKey, PixelMap> = {
     "................",
     "................",
     "................",
-    "...yy..yy.yy...",
+    "...yy..yy.yy....",
     "..yyyy.yyyyy....",
     "...yyyyyyyyyy...",
     "....yyyyyyyy....",
@@ -1215,7 +1253,7 @@ const GRASS: Record<StageKey, PixelMap> = {
   flowering: withSoil([
     "................",
     "..ff.ff.ff.ff...",
-    "..fF.fF.fF.fF..",
+    "..fF.fF.fF.fF...",
     "...l.l.l.l.l....",
     "...l.l.l.l.l....",
     "...l.l.l.l.l....",
@@ -1228,7 +1266,7 @@ const GRASS: Record<StageKey, PixelMap> = {
   ]),
   fruiting: withSoil([
     "..ff.ff.ff.ff...",
-    "..fF.fF.fF.fF..",
+    "..fF.fF.fF.fF...",
     "..ff.ff.ff.ff...",
     "...l.l.l.l.l....",
     "...l.l.l.l.l....",
@@ -1801,23 +1839,295 @@ const BERRY: Record<StageKey, PixelMap> = {
   dormant: SHARED_DORMANT,
 };
 
-/** All shape families keyed by SpriteShape. */
+// ===== Hand-crafted 32×32 overrides for new shapes (fruiting + harvest) =====
+
+const COB_32_FRUITING: PixelMap = withSoil32(r32([
+  "............yyyyy",
+  "...........yyyyyy",
+  "............yyyy",
+  "...........llyl",
+  "..........lllsl",
+  ".........lllsl",
+  "..........llslll",
+  ".........lllsl",
+  "..........llslfffff",
+  ".........lllslffFfff",
+  "..........llslfffffFf",
+  ".........lllslffFfff",
+  "..........llslfffff",
+  ".........lllsl",
+  "..........llslll",
+  ".........lllsl",
+  "..........lls",
+  "............ls",
+  ".............s",
+  ".............s",
+  ".............s",
+  ".............s",
+  "",
+  "",
+]));
+
+const COB_32_HARVEST: PixelMap = withSoil32(r32([
+  "............yyyyy",
+  "...........yyyyyy",
+  "............yyyy",
+  "...........llyyl",
+  "..........lllsl",
+  ".........lllsl",
+  "..........llslll",
+  ".........lllsl",
+  ".........lllslffffffl",
+  "..........llslffFfFffl",
+  ".........lllslfffffFfFf",
+  "..........llslffFffFffl",
+  ".........lllslfffffFfFf",
+  "..........llslffFfFffl",
+  ".........lllslffffffl",
+  "..........llsl",
+  ".........lllsl",
+  "..........lls",
+  "............ls",
+  ".............s",
+  ".............s",
+  ".............s",
+  ".............s",
+  "",
+]));
+
+const HEAD_32_FRUITING: PixelMap = withSoil32(r32([
+  "",
+  "",
+  "....l...............l",
+  "...ll..............ll",
+  "...lllll......lllll",
+  "...llllllllllllllll",
+  "..lllllllllllllllll",
+  "..lllllffffffffllll",
+  "..llllffFffffffflll",
+  ".lllllffFfffFfffllll",
+  ".lllllfffffffffflll",
+  "..llllffFfffFffflll",
+  "..lllllffffffffllll",
+  "..lllllllllllllllll",
+  "...llllllllllllllll",
+  "....llllllllllllll",
+  ".....lllllllllll",
+  "......llllllllll",
+  "........llll",
+  ".........ss",
+  ".........ss",
+  "",
+  "",
+  "",
+]));
+
+const HEAD_32_HARVEST: PixelMap = withSoil32(r32([
+  "",
+  "..l.................l",
+  "..ll...............ll",
+  "..lllll.......lllll",
+  "..lllllllllllllllllll",
+  "..llllllllllllllllllll",
+  ".llllllfffffffffflllll",
+  ".lllllffFfffFfFffflll",
+  ".llllffFfFfffffFFfflll",
+  ".llllfffffffFfffffllll",
+  ".llllffFfffFfFfFffflll",
+  ".llllfffFfffffFfFfflll",
+  ".lllllffFfffFfFffflll",
+  ".llllllfffffffffflllll",
+  "..llllllllllllllllllll",
+  "..lllllllllllllllllll",
+  "...lllllllllllllllll",
+  "....llllllllllllll",
+  ".....lllllllllll",
+  ".........ssss",
+  ".........ss",
+  "",
+  "",
+  "",
+]));
+
+const GOURD_32_FRUITING: PixelMap = withSoil32(r32([
+  "",
+  "......l",
+  ".....lll",
+  "....lllll",
+  ".....lllll",
+  "......lllls",
+  ".......lllls",
+  ".........llls",
+  "...........lls",
+  "..........fffff",
+  ".........fFfffFf",
+  "........fFffffffFf",
+  "........ffffffffff",
+  "........fFffffffFf",
+  ".........fFfffFf",
+  "..........fffff",
+  "..............s",
+  "..............s",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+]));
+
+const GOURD_32_HARVEST: PixelMap = withSoil32(r32([
+  "",
+  "....l",
+  "....lll",
+  ".....llll",
+  "......lllls",
+  ".......lllls",
+  "..........llls",
+  "............lls",
+  ".........fffffff",
+  "........fFfffffFf",
+  ".......fFfffffffffFf",
+  "......fFfffFfffFfffFf",
+  "......ffffffFffffffFf",
+  "......fFfffFfffFfffFfs",
+  ".......fFfffffffffFf",
+  "........fFfffffFf",
+  ".........fffffff",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+]));
+
+const CROWN_32_FRUITING: PixelMap = withSoil32(r32([
+  ".........fffffffffff",
+  "........fFfffFfffFff",
+  ".......fffFfFfFfFffff",
+  "......fffffFfFfFfffff",
+  ".......fffFfFfFfFffff",
+  "........fFfffFfffFff",
+  ".........fffffffffff",
+  ".......llllllllllll",
+  "......lllllllllllllll",
+  ".....llllllllllllllll",
+  "......lllllllllllllll",
+  ".......llllllllllsl",
+  "........lllllllslll",
+  ".........llllslll",
+  "..........llsll",
+  "...........lsl",
+  "............ls",
+  ".............s",
+  ".............s",
+  "",
+  "",
+  "",
+  "",
+  "",
+]));
+
+const CROWN_32_HARVEST: PixelMap = withSoil32(r32([
+  "........fffffffffffff",
+  ".......fFfFffFfFffFff",
+  "......ffffFfFfFfFffffff",
+  ".....fFfFffFffFffFfFfff",
+  ".....fffffFfFfFfFfFffff",
+  "......fFfFffFffFffFfFf",
+  ".......ffffFfFfFfffff",
+  "........fffffffffffff",
+  ".......llllllllllllll",
+  "......llllllllllllllll",
+  ".....lllllllllllllllll",
+  "......llllllllllllllll",
+  ".......llllllllllsl",
+  "........llllllslll",
+  ".........lllslll",
+  "..........llsll",
+  "...........lsl",
+  "............ls",
+  ".............s",
+  "",
+  "",
+  "",
+  "",
+  "",
+]));
+
+const BERRY_32_FRUITING: PixelMap = withSoil32(r32([
+  "",
+  "",
+  "",
+  "",
+  "........llllllll",
+  ".......llllLllll",
+  "......lllLllllLlll",
+  ".....llllLllllLllll",
+  "......lllLllllLllll",
+  ".......llllLlllll",
+  "........llllllllll",
+  "......ff..fff..ff",
+  ".......ff..fF..ff",
+  "........f...f...f",
+  "..........ff..ff",
+  "...........ff",
+  "............ss",
+  "............ss",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+]));
+
+const BERRY_32_HARVEST: PixelMap = withSoil32(r32([
+  "",
+  "",
+  "",
+  ".......lllllllll",
+  "......llllLllllll",
+  ".....lllLllllLllll",
+  "....llllLllllLlllll",
+  ".....lllLllllLlllll",
+  "......llllLlllllll",
+  ".....fff.ffff.fff",
+  "....fFff.fFfF.fFff",
+  "....fff..ffff..fff",
+  ".....ff.fffff.fff",
+  "......ff.fFfF.ff",
+  ".......ff.fff.f",
+  "........ff..ff",
+  "............ss",
+  "............ss",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+]));
+
+/** All shape families keyed by SpriteShape, at 32×32 resolution. */
 export const SHAPE_MAPS: Record<SpriteShape, Record<StageKey, PixelMap>> = {
-  bush: BUSH,
-  root: ROOT,
-  vine: VINE,
-  tall: TALL,
-  leafy: LEAFY,
-  herb: HERB,
-  flower: FLOWER,
-  bulb: BULB,
-  climbing: CLIMBING,
-  grass: GRASS,
-  cob: COB,
-  head: HEAD,
-  gourd: GOURD,
-  crown: CROWN,
-  berry: BERRY,
+  bush: upscaleShape(BUSH),
+  root: upscaleShape(ROOT),
+  vine: upscaleShape(VINE),
+  tall: upscaleShape(TALL),
+  leafy: upscaleShape(LEAFY),
+  herb: upscaleShape(HERB),
+  flower: upscaleShape(FLOWER),
+  bulb: upscaleShape(BULB),
+  climbing: upscaleShape(CLIMBING),
+  grass: upscaleShape(GRASS),
+  cob: { ...upscaleShape(COB), fruiting: COB_32_FRUITING, harvest: COB_32_HARVEST },
+  head: { ...upscaleShape(HEAD), fruiting: HEAD_32_FRUITING, harvest: HEAD_32_HARVEST },
+  gourd: { ...upscaleShape(GOURD), fruiting: GOURD_32_FRUITING, harvest: GOURD_32_HARVEST },
+  crown: { ...upscaleShape(CROWN), fruiting: CROWN_32_FRUITING, harvest: CROWN_32_HARVEST },
+  berry: { ...upscaleShape(BERRY), fruiting: BERRY_32_FRUITING, harvest: BERRY_32_HARVEST },
 };
 
 // Keep legacy exports for backwards compatibility

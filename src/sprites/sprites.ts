@@ -390,20 +390,21 @@ export function spriteFor(
   iconKey: string,
   category: PlantCategory,
   stage: StageKey,
-  scale = 4,
+  scale = 2,
 ): string {
   const key = `${iconKey}/${category}/${stage}/${scale}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
   const map = mapFor(iconKey, stage);
+  const res = map.length;
   const palette = paletteFor(iconKey, category);
   const canvas = document.createElement("canvas");
-  canvas.width = 16 * scale;
-  canvas.height = 16 * scale;
+  canvas.width = res * scale;
+  canvas.height = res * scale;
   const ctx = canvas.getContext("2d")!;
-  for (let row = 0; row < 16; row++) {
-    for (let col = 0; col < 16; col++) {
+  for (let row = 0; row < res; row++) {
+    for (let col = 0; col < res; col++) {
       const slot = map[row][col];
       if (slot === ".") continue;
       ctx.fillStyle = palette[slot as keyof Palette];
