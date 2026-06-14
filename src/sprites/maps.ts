@@ -2569,13 +2569,6 @@ export const PLANT_MAPS: Record<string, Partial<Record<StageKey, PixelMap>>> = {
   },
 };
 
-// Keep legacy exports for backwards compatibility
-export const STAGE_MAPS = BUSH;
-export const ROOT_STAGE_MAPS: Partial<Record<StageKey, PixelMap>> = {
-  fruiting: ROOT.fruiting,
-  harvest: ROOT.harvest,
-};
-
 /** Rendered maps are 16×16 and may only use palette slots; verified by tests. */
 export const PALETTE_SLOTS = new Set([
   ".",
