@@ -70,6 +70,7 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
   lettuce_leaf: { f: "#8fcf6f", F: "#6aa84f" },
   spinach: { f: "#3a7d44", F: "#2a5c33" },
   basil: { f: "#efe9ff", F: "#cfc6ee" },
+  cabbage: { f: "#a8d08a", F: "#84ab66" },
   // tranche 3
   eggplant: { f: "#5b2a83", F: "#3f1d5c" },
   hot_pepper: { f: "#cc2a1e", F: "#9e1f16" },
@@ -77,7 +78,7 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
   summer_squash: { f: "#e8c33a", F: "#c39e22" },
   winter_squash: { f: "#c8893f", F: "#a06a2c" },
   pumpkin: { f: "#e0701f", F: "#b4540f" },
-  watermelon: { f: "#3a7d44", F: "#2a5c33" },
+  watermelon: { f: "#4a8f54", F: "#2a5c33" },
   cantaloupe: { f: "#d4b06a", F: "#b08f4a" },
   lima_bean: { f: "#b6c98a", F: "#93a866" },
   fava_bean: { f: "#6a9a4f", F: "#4f7a38" },
@@ -212,7 +213,7 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   zucchini: "vine",
   bush_bean: "bush",
   snap_pea: "climbing",
-  broccoli: "tall",
+  broccoli: "crown",
   kale: "leafy",
   lettuce_leaf: "leafy",
   spinach: "leafy",
@@ -221,16 +222,17 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   eggplant: "bush",
   hot_pepper: "bush",
   tomatillo: "bush",
-  summer_squash: "vine",
-  winter_squash: "vine",
-  pumpkin: "vine",
-  watermelon: "vine",
-  cantaloupe: "vine",
+  summer_squash: "gourd",
+  winter_squash: "gourd",
+  pumpkin: "gourd",
+  watermelon: "gourd",
+  cantaloupe: "gourd",
   lima_bean: "bush",
   fava_bean: "tall",
   edamame: "bush",
   runner_bean: "climbing",
-  cauliflower: "tall",
+  cauliflower: "crown",
+  cabbage: "head",
   brussels_sprouts: "tall",
   collards: "leafy",
   bok_choy: "leafy",
@@ -259,7 +261,7 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   chervil: "herb",
   lovage: "tall",
   // tranche 5
-  sweet_corn: "tall",
+  sweet_corn: "cob",
   okra: "tall",
   sweet_potato: "root",
   cowpea: "bush",
@@ -267,26 +269,26 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   kohlrabi: "bulb",
   rutabaga: "root",
   daikon: "root",
-  napa_cabbage: "leafy",
+  napa_cabbage: "head",
   mizuna: "leafy",
   tatsoi: "leafy",
   celeriac: "root",
   endive: "leafy",
-  radicchio: "leafy",
+  radicchio: "head",
   sunchoke: "root",
   ground_cherry: "bush",
-  gourd: "vine",
+  gourd: "gourd",
   amaranth: "leafy",
   // tranche 6
   snow_pea: "climbing",
   shelling_pea: "climbing",
   yardlong_bean: "climbing",
   lentil: "bush",
-  bitter_melon: "vine",
-  luffa: "vine",
+  bitter_melon: "gourd",
+  luffa: "gourd",
   cucamelon: "vine",
   rapini: "leafy",
-  romanesco: "tall",
+  romanesco: "crown",
   gai_lan: "leafy",
   watercress: "leafy",
   komatsuna: "leafy",
@@ -296,15 +298,15 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   orach: "leafy",
   spinach_beet: "leafy",
   garlic_chives: "grass",
-  romaine_lettuce: "leafy",
-  butterhead_lettuce: "leafy",
+  romaine_lettuce: "head",
+  butterhead_lettuce: "head",
   // tranche 7
   cherry_tomato: "bush",
   paste_tomato: "bush",
   cape_gooseberry: "bush",
-  spaghetti_squash: "vine",
-  acorn_squash: "vine",
-  honeydew: "vine",
+  spaghetti_squash: "gourd",
+  acorn_squash: "gourd",
+  honeydew: "gourd",
   armenian_cucumber: "vine",
   florence_fennel: "bulb",
   cumin: "herb",
@@ -330,9 +332,9 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   quinoa: "tall",
   peanut: "bush",
   hyacinth_bean: "climbing",
-  purple_sprouting_broccoli: "tall",
+  purple_sprouting_broccoli: "crown",
   sea_kale: "leafy",
-  winter_melon: "vine",
+  winter_melon: "gourd",
   anise: "herb",
   angelica: "tall",
   winter_savory: "herb",
@@ -388,20 +390,21 @@ export function spriteFor(
   iconKey: string,
   category: PlantCategory,
   stage: StageKey,
-  scale = 4,
+  scale = 2,
 ): string {
   const key = `${iconKey}/${category}/${stage}/${scale}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
   const map = mapFor(iconKey, stage);
+  const res = map.length;
   const palette = paletteFor(iconKey, category);
   const canvas = document.createElement("canvas");
-  canvas.width = 16 * scale;
-  canvas.height = 16 * scale;
+  canvas.width = res * scale;
+  canvas.height = res * scale;
   const ctx = canvas.getContext("2d")!;
-  for (let row = 0; row < 16; row++) {
-    for (let col = 0; col < 16; col++) {
+  for (let row = 0; row < res; row++) {
+    for (let col = 0; col < res; col++) {
       const slot = map[row][col];
       if (slot === ".") continue;
       ctx.fillStyle = palette[slot as keyof Palette];
