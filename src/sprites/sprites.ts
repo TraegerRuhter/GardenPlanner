@@ -6,7 +6,7 @@
  */
 
 import type { PlantCategory, StageKey } from "../types/models";
-import { SHAPE_MAPS, type PixelMap, type SpriteShape } from "./maps";
+import { PLANT_MAPS, SHAPE_MAPS, type PixelMap, type SpriteShape } from "./maps";
 
 interface Palette {
   m: string;
@@ -374,6 +374,8 @@ export function resolvedPalette(iconKey: string, category: PlantCategory): Palet
 const cache = new Map<string, string>();
 
 function mapFor(iconKey: string, stage: StageKey): PixelMap {
+  const plantOverride = PLANT_MAPS[iconKey]?.[stage];
+  if (plantOverride) return plantOverride;
   const shape = getPlantShape(iconKey);
   return SHAPE_MAPS[shape][stage];
 }
