@@ -7,7 +7,6 @@
 
 import type { PlantCategory, StageKey } from "../types/models";
 import { PLANT_MAPS, SHAPE_MAPS, type PixelMap, type SpriteShape } from "./maps";
-import { PNG_SPRITES, PNG_RES } from "./png/index";
 
 interface Palette {
   m: string;
@@ -72,6 +71,7 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
   spinach: { f: "#3a7d44", F: "#2a5c33" },
   basil: { f: "#efe9ff", F: "#cfc6ee" },
   cabbage: { f: "#a8d08a", F: "#84ab66" },
+  sunflower: { f: "#f2c12e", F: "#d29a1e" },
   // tranche 3
   eggplant: { f: "#5b2a83", F: "#3f1d5c" },
   hot_pepper: { f: "#cc2a1e", F: "#9e1f16" },
@@ -219,6 +219,7 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   lettuce_leaf: "leafy",
   spinach: "leafy",
   basil: "herb",
+  sunflower: "tall",
   // tranche 3
   eggplant: "bush",
   hot_pepper: "bush",
@@ -399,24 +400,6 @@ export function spriteFor(
   const hit = cache.get(key);
   if (hit) return hit;
 
-  // Check for a PNG sprite first — full-color, higher quality
-  const pngDataUrl = PNG_SPRITES[iconKey]?.[stage];
-  if (pngDataUrl) {
-    const pngImg = new Image();
-    pngImg.src = pngDataUrl;
-    const canvas = document.createElement("canvas");
-    const size = PNG_RES * scale;
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d")!;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(pngImg, 0, 0, size, size);
-    const url = canvas.toDataURL();
-    cache.set(key, url);
-    return url;
-  }
-
-  // Fall back to character-map rendering
   const map = mapFor(iconKey, stage);
   const res = map.length;
   const palette = paletteFor(iconKey, category);

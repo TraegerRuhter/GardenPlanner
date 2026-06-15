@@ -25,6 +25,9 @@ export interface CanvasProps {
   height: number;
 }
 
+/** Integer zoom stops keep pixel sprites crisp (no fractional scaling). */
+const ZOOM_STEPS = [0.25, 0.5, 1, 2, 3, 4];
+
 export function GardenCanvas({
   garden,
   instances,
@@ -54,11 +57,16 @@ export function GardenCanvas({
     [instances],
   );
 
-  function zoomAt(factor: number, center?: { x: number; y: number }) {
+  function zoomStep(dir: 1 | -1, center?: { x: number; y: number }) {
     const stage = stageRef.current;
     if (!stage) return;
     const old = stage.scaleX();
-    const next = Math.max(0.35, Math.min(3, old * factor));
+    let idx = 0;
+    for (let i = 1; i < ZOOM_STEPS.length; i++) {
+      if (Math.abs(ZOOM_STEPS[i] - old) < Math.abs(ZOOM_STEPS[idx] - old)) idx = i;
+    }
+    const next = ZOOM_STEPS[Math.max(0, Math.min(ZOOM_STEPS.length - 1, idx + dir))];
+    if (next === old) return;
     const c = center ?? { x: width / 2, y: height / 2 };
     const rel = { x: (c.x - stage.x()) / old, y: (c.y - stage.y()) / old };
     stage.scale({ x: next, y: next });
@@ -75,11 +83,11 @@ export function GardenCanvas({
         draggable
         onWheel={(e) => {
           e.evt.preventDefault();
-          zoomAt(e.evt.deltaY > 0 ? 0.92 : 1.08, e.target.getStage()!.getPointerPosition() ?? undefined);
+          zoomStep(e.evt.deltaY > 0 ? -1 : 1, e.target.getStage()!.getPointerPosition() ?? undefined);
         }}
         className="touch-none"
       >
-        <Layer>
+        <Layer imageSmoothingEnabled={false}>
           {garden.areas.map((area) => (
             <AreaGroup
               key={area.id}
@@ -105,8 +113,8 @@ export function GardenCanvas({
         >
           ↑N
         </div>
-        <button type="button" onClick={() => zoomAt(1.2)} className="h-8 w-8 rounded-lg bg-white/85 font-bold shadow">+</button>
-        <button type="button" onClick={() => zoomAt(1 / 1.2)} className="h-8 w-8 rounded-lg bg-white/85 font-bold shadow">−</button>
+        <button type="button" onClick={() => zoomStep(1)} className="h-8 w-8 rounded-lg bg-white/85 font-bold shadow">+</button>
+        <button type="button" onClick={() => zoomStep(-1)} className="h-8 w-8 rounded-lg bg-white/85 font-bold shadow">−</button>
         <span className="rounded bg-white/70 px-1 text-[10px]">{Math.round(scale * 100)}%</span>
       </div>
     </div>
@@ -219,7 +227,8 @@ function TileCell({
     const inst = instancesById.get(content.instanceId);
     const plant = inst && plantsById.get(inst.plantId);
     if (inst && plant) {
-      sprite = spriteFor(plant.iconKey, plant.category, inst.status === "planned" ? "planted" : inst.currentStage, 4);
+      // scale 2 → 32px native = TILE_PX, so the sprite blits 1:1 at zoom 1.
+      sprite = spriteFor(plant.iconKey, plant.category, inst.status === "planned" ? "planted" : inst.currentStage, 2);
       ghost = inst.status === "planned";
     }
   }
