@@ -16,7 +16,7 @@ import type {
   SunRequirement,
 } from "../types/models";
 import { registerDynamicAccent, setPlantShape } from "../sprites/sprites";
-import type { SpriteShape } from "../sprites/maps";
+import type { SpriteShape } from "../sprites/shapes";
 
 const COLOR_MAP: Record<string, string> = {
   red: "#d23c2e",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StageKey } from "../types/models";
-import { SHAPE_LABELS, type SpriteShape } from "./maps";
+import { SHAPE_LABELS, type SpriteShape } from "./shapes";
 import { buildSlotPalette, generateGrid, GRID_SIZE } from "./generate";
 
 const SHAPES = Object.keys(SHAPE_LABELS) as SpriteShape[];

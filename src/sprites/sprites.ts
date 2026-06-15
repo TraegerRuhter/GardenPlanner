@@ -8,7 +8,7 @@
  */
 
 import type { PlantCategory, StageKey } from "../types/models";
-import type { SpriteShape } from "./maps";
+import type { SpriteShape } from "./shapes";
 import { buildSlotPalette, generateGrid, GRID_SIZE } from "./generate";
 
 interface Palette {

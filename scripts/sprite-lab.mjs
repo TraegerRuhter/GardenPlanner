@@ -100,11 +100,12 @@ const B = {
     for (const [dx, dy] of [[-4, -1], [4, -1], [0, -4], [-2, -3], [2, -3]]) set(g, 16 + dx, 8 + dy, "lh");
   },
   vine(g, o) {
-    foliage(g, [[16, 11, 5], [10, 12, 3.4], [22, 12, 3.4], [13, 8, 2.8], [19, 8, 2.8]], 16, 10);
+    for (let x = 8; x < 24; x++) set(g, x, 16, "sl");
+    foliage(g, [[11, 13, 3], [16, 11, 3.5], [21, 13, 3], [14, 15, 2.4], [19, 15, 2.4]], 16, 12);
     if (o.fruit) {
-      for (const [vx, vy] of [[16, 16], [16, 17], [15, 18], [14, 19]]) set(g, vx, vy, "sl");
-      for (let i = 0; i < 12; i++) { const x = 10 + i, y = 25 - Math.round(i * 0.4); set(g, x, y, "fm"); set(g, x, y - 1, i > 0 && i < 11 ? "fh" : "fm"); set(g, x, y + 1, "fl"); }
-      for (let i = 2; i < 10; i += 3) set(g, 10 + i, 24 - Math.round(i * 0.4), "fl");
+      for (const [vx, vy] of [[16, 17], [15, 18], [14, 19], [13, 20]]) set(g, vx, vy, "sl");
+      for (let i = 0; i < 12; i++) { const x = 9 + i, y = 25 - Math.round(i * 0.4); set(g, x, y, "fm"); set(g, x, y - 1, i > 0 && i < 11 ? "fh" : "fm"); set(g, x, y + 1, "fl"); }
+      for (let i = 2; i < 10; i += 3) set(g, 9 + i, 24 - Math.round(i * 0.4), "fl");
     }
   },
   tall(g, o) {
@@ -144,11 +145,13 @@ const B = {
   },
   cob(g, o) {
     stem(g, 16, 28, 5);
-    for (const dir of [-1, 1]) { for (let i = 0; i < 9; i++) set(g, 16 + dir * (1 + i), 11 + i + Math.round(i * i * 0.05), i < 5 ? "lm" : "ll"); for (let i = 0; i < 7; i++) set(g, 16 + dir * (1 + i), 19 + i, i < 4 ? "lm" : "ll"); }
+    for (const dir of [-1, 1]) for (let i = 0; i < 8; i++) set(g, 16 + dir * (1 + i), 12 + i + Math.round(i * i * 0.06), i < 5 ? "lm" : "ll");
     if (o.fruit) {
-      for (let y = 12; y < 22; y++) for (let x = 17; x <= 21; x++) { if ((x - 19) ** 2 / 4.5 + (y - 17) ** 2 / 22 <= 1) set(g, x, y, ((x + y) % 2 === 0) ? "fh" : "fm"); }
-      for (let y = 13; y < 22; y++) set(g, 21, y, "fl");
-      for (let y = 19; y < 24; y++) { set(g, 17, y, "ll"); set(g, 18, y, "lm"); }
+      for (let y = 11; y < 23; y++) for (let x = 16; x <= 22; x++) { const dx = (x - 19) / 3.4, dy = (y - 17) / 6.2; if (dx * dx + dy * dy <= 1) set(g, x, y, y % 2 === 0 ? "fh" : "fm"); }
+      for (let y = 12; y < 23; y++) set(g, 22, y, "fl");
+      set(g, 19, 22, "fl");
+      for (let i = 0; i < 5; i++) { set(g, 16 + i, 21 + Math.round(i * 0.3), "lm"); set(g, 16 + i, 22 + Math.round(i * 0.3), "ll"); }
+      for (const dx of [0, 1, 2]) set(g, 19 + dx, 10, "yh");
       for (const dx of [-2, -1, 0, 1, 2]) { set(g, 16 + dx, 4, "yh"); set(g, 16 + dx, 3, "yl"); }
     }
   },
@@ -160,9 +163,9 @@ const B = {
     for (let i = 0; i < 6; i++) { set(g, 16, 10 + i, "ld"); set(g, 10 + i, 16, "ld"); }
   },
   gourd(g, o) {
-    for (let x = 6; x < 14; x++) set(g, x, 14, "sl");
-    foliage(g, [[8, 11, 3.5], [12, 13, 3]], 9, 12);
-    if (o.fruit) { disc(g, 19, 22, 6, ["fh", "fm", "fl"], true); for (const dx of [-3, 0, 3]) for (let y = -5; y <= 5; y++) if (dx * dx + y * y <= 36) set(g, 19 + dx, 22 + y, "fl"); }
+    for (let x = 6; x < 22; x++) set(g, x, 16, "sl");
+    foliage(g, [[9, 12, 3.5], [14, 13, 3], [8, 15, 2.4], [13, 15, 2.4]], 10, 13);
+    if (o.fruit) { disc(g, 20, 22, 6, ["fh", "fm", "fl"], true); for (const dx of [-3, 0, 3]) for (let y = -5; y <= 5; y++) if (dx * dx + y * y <= 36) set(g, 20 + dx, 22 + y, "fl"); }
   },
   crown(g, o) {
     stem(g, 16, 28, 16);
@@ -179,7 +182,7 @@ const B = {
 
 // shared young/late stages (archetype-independent)
 function seed(g) { mound(g); set(g, 15, 27, "ol"); set(g, 16, 27, "sl"); set(g, 16, 26, "sm"); }
-function sprout0(g) { mound(g); set(g, 16, 27, "sm"); set(g, 16, 26, "lm"); set(g, 15, 26, "lh"); }
+function sprout0(g) { mound(g); set(g, 16, 27, "sm"); set(g, 16, 26, "sm"); set(g, 16, 25, "lm"); set(g, 15, 25, "lh"); set(g, 17, 26, "ll"); }
 function sprout1(g) { mound(g); stem(g, 16, 28, 24); foliage(g, [[14, 23, 2.2], [18, 23, 2.2]], 16, 23); }
 function stub(g) { mound(g); for (let y = 22; y < 29; y++) { set(g, 15, y, "wh"); set(g, 16, y, "wl"); } }
 
@@ -214,13 +217,15 @@ function renderGrid(grid, P, scale) {
 
 const BASES = {
   bush: { leaf: "#58a854", fruit: "#d23c2e", stem: "#3a7d44" },
+  cob: { leaf: "#5aa64f", fruit: "#e8c84a", stem: "#4a8a3f" },
+  vine: { leaf: "#4e9e54", fruit: "#3f8f4f", stem: "#6a8a4a" },
   root: { leaf: "#5fae54", fruit: "#e88a2e", root: "#e88a2e", stem: "#3a7d44" },
   flower: { leaf: "#4e9e54", fruit: "#e76fb3", stem: "#3a7d44" },
   gourd: { leaf: "#4e9e54", fruit: "#e0701f", stem: "#6a8a4a" },
 };
 
 // ---------------- lifecycle contact sheet ----------------
-const ARCHES = ["bush", "root", "flower", "gourd"];
+const ARCHES = ["bush", "cob", "vine", "gourd"];
 const SCALE = 2, SP = 64, CW = 66, CH = 78, PADX = 10, TOP = 40, LEFT = 64;
 const sheet = createCanvas(LEFT + STAGES.length * CW + PADX, TOP + ARCHES.length * CH + PADX);
 const sx = sheet.getContext("2d");
@@ -264,6 +269,7 @@ const REAL = [
   { name: "sunflower", shape: "tall", p: { ...BP, f: "#f2c12e", F: "#d29a1e" } },
   { name: "pumpkin", shape: "gourd", p: { ...BP, f: "#e0701f", F: "#b4540f" } },
   { name: "broccoli", shape: "crown", p: { ...BP, f: "#3f8f4f", F: "#2f6f3e" } },
+  { name: "corn", shape: "cob", p: { ...BP, f: "#e8c84a", F: "#c2a52e" } },
   { name: "onion", shape: "bulb", p: { ...BP, f: "#c9a26a", F: "#a8854f" } },
   { name: "basil", shape: "herb", p: { m: "#7d5c46", M: "#5c4033", s: "#3a7d44", l: "#6fbf63", L: "#4c9950", y: "#b8a05a", w: "#8a6a4f", f: "#efe9ff", F: "#cfc6ee" } },
 ];

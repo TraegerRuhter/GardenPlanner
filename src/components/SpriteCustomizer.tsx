@@ -14,7 +14,7 @@ import {
   setPlantShape,
   type SpritePalette,
 } from "../sprites/sprites";
-import { SHAPE_LABELS, type SpriteShape } from "../sprites/maps";
+import { SHAPE_LABELS, type SpriteShape } from "../sprites/shapes";
 
 const PREVIEW_STAGES: StageKey[] = [
   "seedling",
