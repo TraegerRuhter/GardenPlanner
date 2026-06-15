@@ -1,5 +1,5 @@
 /**
- * PNG sprite registry — full-color 32x32 sprites keyed by iconKey and stage.
+ * PNG sprite registry — full-color 64x64 sprites keyed by iconKey and stage.
  * Falls back to character-map rendering for plants without PNG sprites.
  */
 
@@ -8,7 +8,7 @@ import { CORN_SPRITES } from "./corn";
 import { SUNFLOWER_SPRITES } from "./sunflower";
 
 /** Resolution of PNG sprites in pixels. */
-export const PNG_RES = 32;
+export const PNG_RES = 64;
 
 /**
  * Registry of PNG sprite data URLs, keyed by iconKey then stage.
