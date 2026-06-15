@@ -74,7 +74,7 @@ function extractCell(col, row) {
       const nidx = ny * cw + nx;
       if (isBg[nidx]) continue;
       const nc = pix[nidx];
-      if (dist(nc, cc) < 30 && dist(nc, med) < 95) { isBg[nidx] = 1; stack.push(nidx); }
+      if (dist(nc, cc) < 30 && dist(nc, med) < 80) { isBg[nidx] = 1; stack.push(nidx); }
     }
   }
 
