@@ -5,6 +5,7 @@
 
 import type { StageKey } from "../../types/models";
 import { CORN_SPRITES } from "./corn";
+import { SUNFLOWER_SPRITES } from "./sunflower";
 
 /** Resolution of PNG sprites in pixels. */
 export const PNG_RES = 32;
@@ -17,3 +18,4 @@ export const PNG_SPRITES: Record<string, Partial<Record<StageKey, string>>> = {}
 
 // Register per-plant PNG sprite modules
 PNG_SPRITES["sweet_corn"] = CORN_SPRITES;
+PNG_SPRITES["sunflower"] = SUNFLOWER_SPRITES;
