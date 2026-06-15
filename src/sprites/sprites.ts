@@ -1,12 +1,15 @@
 /**
  * Sprite resolution (§13.5, §21.4): iconKey + stage → rendered data URL.
- * Generic stage maps render with a per-category palette; per-plant accents
- * (tomato red, carrot orange…) override the accent slot; root crops swap in
- * the root-yield maps. A canvas-backed cache keeps re-renders free.
+ * A procedural generator builds a 32×32 grid of palette slots for the plant's
+ * shape archetype + growth stage (see generate.ts); the per-category palette,
+ * per-plant accents (tomato red, carrot orange…) and runtime customizations
+ * derive the slot colors, so every plant stays fully recolorable. A
+ * canvas-backed cache keeps re-renders free.
  */
 
 import type { PlantCategory, StageKey } from "../types/models";
-import { PLANT_MAPS, SHAPE_MAPS, type PixelMap, type SpriteShape } from "./maps";
+import type { SpriteShape } from "./maps";
+import { buildSlotPalette, generateGrid, GRID_SIZE } from "./generate";
 
 interface Palette {
   m: string;
@@ -375,13 +378,6 @@ export function resolvedPalette(iconKey: string, category: PlantCategory): Palet
 
 const cache = new Map<string, string>();
 
-function mapFor(iconKey: string, stage: StageKey): PixelMap {
-  const plantOverride = PLANT_MAPS[iconKey]?.[stage];
-  if (plantOverride) return plantOverride;
-  const shape = getPlantShape(iconKey);
-  return SHAPE_MAPS[shape][stage];
-}
-
 function paletteFor(iconKey: string, category: PlantCategory): Palette {
   const base = CATEGORY_PALETTES[category];
   const accent = ACCENTS[iconKey];
@@ -400,19 +396,21 @@ export function spriteFor(
   const hit = cache.get(key);
   if (hit) return hit;
 
-  const map = mapFor(iconKey, stage);
-  const res = map.length;
-  const palette = paletteFor(iconKey, category);
+  const grid = generateGrid(getPlantShape(iconKey), stage);
+  const slots = buildSlotPalette(paletteFor(iconKey, category));
+  // 32px art. scale 2 → 1× (32px = TILE_PX, blits 1:1), scale 6 → 3× (96px).
+  // Output dims equal the old 16px maps' (16×scale), so consumers are unchanged.
+  const px = Math.max(1, Math.round(scale / 2));
   const canvas = document.createElement("canvas");
-  canvas.width = res * scale;
-  canvas.height = res * scale;
+  canvas.width = GRID_SIZE * px;
+  canvas.height = GRID_SIZE * px;
   const ctx = canvas.getContext("2d")!;
-  for (let row = 0; row < res; row++) {
-    for (let col = 0; col < res; col++) {
-      const slot = map[row][col];
-      if (slot === ".") continue;
-      ctx.fillStyle = palette[slot as keyof Palette];
-      ctx.fillRect(col * scale, row * scale, scale, scale);
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const slot = grid[y][x];
+      if (!slot) continue;
+      ctx.fillStyle = slots[slot] ?? "#ff00ff";
+      ctx.fillRect(x * px, y * px, px, px);
     }
   }
   const url = canvas.toDataURL();
