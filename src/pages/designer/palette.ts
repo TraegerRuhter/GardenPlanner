@@ -51,8 +51,12 @@ export const WATER: Record<WaterFeatureKind, { label: string; glyph: string; col
   spigot: { label: "Spigot", glyph: "⊤", color: "#3a6f9e" },
 };
 
-/** Canvas pixels per tile at zoom 1. */
-export const TILE_PX = 40;
+/**
+ * Canvas pixels per tile at zoom 1. Set to the native sprite size (32) so the
+ * plot renders pixel sprites at an integer scale (1× at zoom 1) — the key to
+ * crisp, non-fuzzy pixel art. See docs/sprite-system-redesign.md §4.1.
+ */
+export const TILE_PX = 32;
 
 /** Base terrain for an empty garden-bed tile. */
 export const SOIL_BASE = "#8a6a50";

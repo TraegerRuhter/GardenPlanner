@@ -13,7 +13,7 @@ import type { Settings } from "../types/models";
 import { db, SETTINGS_ID } from "../db/db";
 import { seedCatalogIfNeeded } from "../db/seed";
 import { registerDynamicAccent, setRootIcon, setPlantShape } from "../sprites/sprites";
-import type { SpriteShape } from "../sprites/maps";
+import type { SpriteShape } from "../sprites/shapes";
 
 /** Spec-mandated defaults: §7.12 and §32.7. */
 export const defaultSettings: Settings = {

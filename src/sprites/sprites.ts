@@ -1,13 +1,15 @@
 /**
  * Sprite resolution (§13.5, §21.4): iconKey + stage → rendered data URL.
- * Generic stage maps render with a per-category palette; per-plant accents
- * (tomato red, carrot orange…) override the accent slot; root crops swap in
- * the root-yield maps. A canvas-backed cache keeps re-renders free.
+ * A procedural generator builds a 32×32 grid of palette slots for the plant's
+ * shape archetype + growth stage (see generate.ts); the per-category palette,
+ * per-plant accents (tomato red, carrot orange…) and runtime customizations
+ * derive the slot colors, so every plant stays fully recolorable. A
+ * canvas-backed cache keeps re-renders free.
  */
 
 import type { PlantCategory, StageKey } from "../types/models";
-import { PLANT_MAPS, SHAPE_MAPS, type PixelMap, type SpriteShape } from "./maps";
-import { PNG_SPRITES, PNG_RES } from "./png/index";
+import type { SpriteShape } from "./shapes";
+import { buildSlotPalette, generateGrid, GRID_SIZE } from "./generate";
 
 interface Palette {
   m: string;
@@ -54,8 +56,10 @@ export function registerDynamicAccent(iconKey: string, accent: Partial<Palette>)
   }
 }
 
-/** Per-plant accent colors, keyed by iconKey (sprite-layer data, not catalog). */
-const ACCENTS: Record<string, { f: string; F: string }> = {
+/** Per-plant accent colors, keyed by iconKey (sprite-layer data, not catalog).
+ *  Usually just the fruit/bloom accent (f/F), but any palette slot may be
+ *  overridden — e.g. red rhubarb stalks (s) or blue-green aloe pads (l/L). */
+const ACCENTS: Record<string, Partial<Palette>> = {
   tomato: { f: "#d23c2e", F: "#a02a20" },
   pepper_sweet: { f: "#e2542f", F: "#b03c1e" },
   cucumber: { f: "#3f8f4f", F: "#2f6f3e" },
@@ -72,6 +76,7 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
   spinach: { f: "#3a7d44", F: "#2a5c33" },
   basil: { f: "#efe9ff", F: "#cfc6ee" },
   cabbage: { f: "#a8d08a", F: "#84ab66" },
+  sunflower: { f: "#f2c12e", F: "#d29a1e" },
   // tranche 3
   eggplant: { f: "#5b2a83", F: "#3f1d5c" },
   hot_pepper: { f: "#cc2a1e", F: "#9e1f16" },
@@ -197,6 +202,26 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
   feverfew: { f: "#f0ead0", F: "#ccc6aa" },
   celtuce: { f: "#9bc46a", F: "#79a04a" },
   cutting_celery: { f: "#8fb05a", F: "#6c8a3e" },
+  // tranche 9 (perennial fruit + specialty)
+  apple: { f: "#d6403a", F: "#a82c28" },
+  pear: { f: "#c3d24a", F: "#9aa82e" },
+  raspberry: { f: "#c0304f", F: "#8e2038" },
+  blackberry: { f: "#3a2a4a", F: "#241a30" },
+  blueberry: { f: "#5566b0", F: "#3a4684" },
+  strawberry: { f: "#e23b4b", F: "#b22a38" },
+  potato: { f: "#c9a26a", F: "#9a774a" },
+  rhubarb: { f: "#c0392b", F: "#8e2b20", s: "#c0392b" }, // red leaf stalks
+  asparagus: { f: "#6aa83f", F: "#4f8a2c" },
+  aloe_vera: { f: "#e8703a", F: "#bd5526", l: "#6fae84", L: "#4c8a64" }, // blue-green pads
+
+  prickly_pear: { f: "#c0407a", F: "#922f5c" },
+  // tranche 10 (more perennial fruit + creeping herb)
+  cherry: { f: "#a01828", F: "#7a101c" },
+  fig: { f: "#6a4a6e", F: "#4a3050" },
+  currant: { f: "#9a1f3a", F: "#6e1428" },
+  gooseberry: { f: "#9ab84a", F: "#76902e" },
+  grape: { f: "#6a3a8a", F: "#4a2860" },
+  thyme: { f: "#9a7cc0", F: "#745aa0" },
 };
 
 /** Per-plant sprite shape overrides. */
@@ -219,6 +244,7 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   lettuce_leaf: "leafy",
   spinach: "leafy",
   basil: "herb",
+  sunflower: "tall",
   // tranche 3
   eggplant: "bush",
   hot_pepper: "bush",
@@ -234,13 +260,13 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   runner_bean: "climbing",
   cauliflower: "crown",
   cabbage: "head",
-  brussels_sprouts: "tall",
+  brussels_sprouts: "sprouts",
   collards: "leafy",
   bok_choy: "leafy",
   mustard_greens: "leafy",
   turnip: "root",
   parsnip: "root",
-  celery: "leafy",
+  celery: "stalk",
   leek: "bulb",
   shallot: "bulb",
   scallion: "grass",
@@ -264,7 +290,7 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   // tranche 5
   sweet_corn: "cob",
   okra: "tall",
-  sweet_potato: "root",
+  sweet_potato: "tuber",
   cowpea: "bush",
   chickpea: "bush",
   kohlrabi: "bulb",
@@ -276,7 +302,7 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   celeriac: "root",
   endive: "leafy",
   radicchio: "head",
-  sunchoke: "root",
+  sunchoke: "tuber",
   ground_cherry: "bush",
   gourd: "gourd",
   amaranth: "leafy",
@@ -317,7 +343,7 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   land_cress: "leafy",
   elephant_garlic: "bulb",
   globe_artichoke: "tall",
-  cardoon: "tall",
+  cardoon: "stalk",
   shiso: "herb",
   anise_hyssop: "herb",
   bee_balm: "flower",
@@ -343,8 +369,27 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   stevia: "herb",
   yarrow: "flower",
   feverfew: "flower",
-  celtuce: "leafy",
+  celtuce: "stalk",
   cutting_celery: "herb",
+  // tranche 9 (perennial fruit + specialty)
+  apple: "tree",
+  pear: "tree",
+  raspberry: "cane",
+  blackberry: "cane",
+  blueberry: "shrub",
+  strawberry: "mat",
+  potato: "tuber",
+  rhubarb: "stalk",
+  asparagus: "fern",
+  aloe_vera: "succulent",
+  prickly_pear: "cactus",
+  // tranche 10 (more perennial fruit + creeping herb)
+  cherry: "tree",
+  fig: "tree",
+  currant: "shrub",
+  gooseberry: "shrub",
+  grape: "climbing",
+  thyme: "mat",
 };
 
 export function setPlantShape(iconKey: string, shape: SpriteShape) {
@@ -374,13 +419,6 @@ export function resolvedPalette(iconKey: string, category: PlantCategory): Palet
 
 const cache = new Map<string, string>();
 
-function mapFor(iconKey: string, stage: StageKey): PixelMap {
-  const plantOverride = PLANT_MAPS[iconKey]?.[stage];
-  if (plantOverride) return plantOverride;
-  const shape = getPlantShape(iconKey);
-  return SHAPE_MAPS[shape][stage];
-}
-
 function paletteFor(iconKey: string, category: PlantCategory): Palette {
   const base = CATEGORY_PALETTES[category];
   const accent = ACCENTS[iconKey];
@@ -399,37 +437,21 @@ export function spriteFor(
   const hit = cache.get(key);
   if (hit) return hit;
 
-  // Check for a PNG sprite first — full-color, higher quality
-  const pngDataUrl = PNG_SPRITES[iconKey]?.[stage];
-  if (pngDataUrl) {
-    const pngImg = new Image();
-    pngImg.src = pngDataUrl;
-    const canvas = document.createElement("canvas");
-    const size = PNG_RES * scale;
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d")!;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(pngImg, 0, 0, size, size);
-    const url = canvas.toDataURL();
-    cache.set(key, url);
-    return url;
-  }
-
-  // Fall back to character-map rendering
-  const map = mapFor(iconKey, stage);
-  const res = map.length;
-  const palette = paletteFor(iconKey, category);
+  const grid = generateGrid(getPlantShape(iconKey), stage);
+  const slots = buildSlotPalette(paletteFor(iconKey, category));
+  // 32px art. scale 2 → 1× (32px = TILE_PX, blits 1:1), scale 6 → 3× (96px).
+  // Output dims equal the old 16px maps' (16×scale), so consumers are unchanged.
+  const px = Math.max(1, Math.round(scale / 2));
   const canvas = document.createElement("canvas");
-  canvas.width = res * scale;
-  canvas.height = res * scale;
+  canvas.width = GRID_SIZE * px;
+  canvas.height = GRID_SIZE * px;
   const ctx = canvas.getContext("2d")!;
-  for (let row = 0; row < res; row++) {
-    for (let col = 0; col < res; col++) {
-      const slot = map[row][col];
-      if (slot === ".") continue;
-      ctx.fillStyle = palette[slot as keyof Palette];
-      ctx.fillRect(col * scale, row * scale, scale, scale);
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const slot = grid[y][x];
+      if (!slot) continue;
+      ctx.fillStyle = slots[slot] ?? "#ff00ff";
+      ctx.fillRect(x * px, y * px, px, px);
     }
   }
   const url = canvas.toDataURL();

@@ -206,4 +206,40 @@ export const companions: CompanionRelationship[] = [
     reason: "close apiaceae relatives; dill can cross and stunt carrots",
     strength: "weak",
   },
+  // --- tranche 9 ---
+  {
+    aPlantId: "asparagus",
+    bPlantId: "tomato",
+    type: "beneficial",
+    reason: "tomato repels asparagus beetle; asparagus deters root nematodes",
+    strength: "strong",
+  },
+  {
+    aPlantId: "asparagus",
+    bPlantId: "basil",
+    type: "beneficial",
+    reason: "basil deters asparagus beetle and draws pollinators",
+    strength: "moderate",
+  },
+  {
+    aPlantId: "apple",
+    bPlantId: "chives",
+    type: "beneficial",
+    reason: "chives deter aphids and help suppress apple scab",
+    strength: "moderate",
+  },
+  {
+    aPlantId: "raspberry",
+    bPlantId: "garlic_chives",
+    type: "beneficial",
+    reason: "alliums suppress fungal disease and deter beetles",
+    strength: "weak",
+  },
+  {
+    aPlantId: "grape",
+    bPlantId: "chives",
+    type: "beneficial",
+    reason: "chives deter aphids and Japanese beetles around the vine",
+    strength: "weak",
+  },
 ];

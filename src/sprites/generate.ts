@@ -1,0 +1,476 @@
+/**
+ * Procedural sprite generator (§13.5 redesign). Builds a 32×32 grid of palette
+ * SLOT ids for a given shape archetype + growth stage, plus the slot→hex palette
+ * derived from a plant's resolved colors. Pure (no DOM) so it is unit-testable;
+ * sprites.ts renders the grid to a cached canvas. Cozy/Stardew styling: soft
+ * shading ramps + a dark unifying outline.
+ *
+ * Slot ids: leaf lh/lm/ll/ld · fruit fh/fm/fl/fd/fs(spec) · stem sh/sm/sl ·
+ * root rh/rm/rl · soil kh/kl · wood wh/wl · senescent yh/ym/yl · outline ol.
+ */
+import type { StageKey } from "../types/models";
+import type { SpriteShape } from "./shapes";
+
+export const GRID_SIZE = 32;
+
+type Slot = string;
+type Grid = (Slot | null)[][];
+interface Produce {
+  bud?: boolean;
+  bloom?: boolean;
+  /** "set" = small green unripe produce; "ripe" = full accent-colored produce. */
+  fruit?: "set" | "ripe";
+}
+
+/** Colors needed to derive the slot palette (structurally a subset of Palette). */
+export interface SourcePalette {
+  l: string;
+  L: string;
+  f: string;
+  F: string;
+  s: string;
+  m: string;
+  M: string;
+  y: string;
+  w: string;
+}
+
+// ---------------- color helpers ----------------
+const hexToRgb = (h: string): [number, number, number] => {
+  const x = h.replace("#", "");
+  return [parseInt(x.slice(0, 2), 16), parseInt(x.slice(2, 4), 16), parseInt(x.slice(4, 6), 16)];
+};
+const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+const rgbToHex = (r: number, g: number, b: number) =>
+  "#" + [r, g, b].map((v) => clamp(v).toString(16).padStart(2, "0")).join("");
+
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (mx + mn) / 2;
+  if (mx !== mn) {
+    const d = mx - mn;
+    s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    switch (mx) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      default: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return [h, s, l];
+}
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  if (s === 0) return [l * 255, l * 255, l * 255];
+  const k = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  return [k(p, q, h + 1 / 3) * 255, k(p, q, h) * 255, k(p, q, h - 1 / 3) * 255];
+}
+/** Shift a hex color in HSL space (lightness, saturation, hue deltas). */
+function shift(hex: string, dL: number, dS = 0, dH = 0): string {
+  const [r, g, b] = hexToRgb(hex);
+  let [h, s, l] = rgbToHsl(r, g, b);
+  h = (h + dH + 1) % 1;
+  s = Math.max(0, Math.min(1, s + dS));
+  l = Math.max(0, Math.min(1, l + dL));
+  const [R, G, B] = hslToRgb(h, s, l);
+  return rgbToHex(R, G, B);
+}
+
+/** Derive the full slot palette from a plant's resolved colors. */
+export function buildSlotPalette(p: SourcePalette): Record<Slot, string> {
+  return {
+    lh: shift(p.l, +0.1), lm: p.l, ll: p.L, ld: shift(p.L, -0.12),
+    fh: shift(p.f, +0.1), fm: p.f, fl: p.F, fd: shift(p.F, -0.12), fs: shift(p.f, +0.34, -0.12),
+    sh: shift(p.s, +0.1), sm: p.s, sl: shift(p.s, -0.13),
+    rh: shift(p.f, +0.12), rm: p.f, rl: p.F,
+    kh: p.m, kl: p.M,
+    wh: shift(p.w, +0.1), wl: shift(p.w, -0.13),
+    yh: shift(p.y, +0.1), ym: p.y, yl: shift(p.y, -0.14),
+    bh: "#fdf3da", bm: "#f4d676",
+    ol: "#241813",
+  };
+}
+
+// ---------------- grid + shape helpers ----------------
+const SZ = GRID_SIZE;
+const newGrid = (): Grid => Array.from({ length: SZ }, () => Array<Slot | null>(SZ).fill(null));
+const set = (g: Grid, x: number, y: number, s: Slot) => {
+  x |= 0; y |= 0;
+  if (x >= 0 && x < SZ && y >= 0 && y < SZ && s) g[y][x] = s;
+};
+
+function mound(g: Grid) {
+  for (let x = 8; x < 24; x++) set(g, x, 30, "kl");
+  for (let x = 10; x < 22; x++) set(g, x, 29, "kh");
+  for (let x = 13; x < 19; x++) set(g, x, 28, "kl");
+}
+/** Rounded mound of soil for crops whose yield sits in/under the ground. */
+function soilMound(g: Grid) {
+  for (let x = 5; x <= 27; x++) {
+    const dx = (x - 16) / 11, top = 21 + Math.round(dx * dx * 5);
+    for (let y = top; y <= 30; y++) set(g, x, y, y <= top + 1 ? "kh" : "kl");
+  }
+}
+function stem(g: Grid, x0: number, yBot: number, yTop: number) {
+  for (let y = yTop; y <= yBot; y++) { set(g, x0 - 1, y, "sh"); set(g, x0, y, "sm"); set(g, x0 + 1, y, "sl"); }
+}
+function foliage(g: Grid, lobes: number[][], cx: number, cy: number) {
+  const inL = (x: number, y: number) => lobes.some(([lx, ly, lr]) => (x - lx) ** 2 + (y - ly) ** 2 <= lr * lr);
+  for (let y = 0; y < SZ; y++)
+    for (let x = 0; x < SZ; x++) {
+      if (!inL(x, y)) continue;
+      const t = (x - cx) / 11 + (y - cy) / 11;
+      let s = t < -0.5 ? "lh" : t > 0.55 ? "ll" : "lm";
+      if (!inL(x - 1, y) || !inL(x + 1, y) || !inL(x, y - 1) || !inL(x, y + 1)) s = t > 0 ? "ld" : "lh";
+      set(g, x, y, s);
+    }
+}
+function disc(g: Grid, cx: number, cy: number, r: number, slots: [Slot, Slot, Slot], spec?: boolean) {
+  const [hi, mid, lo] = slots;
+  for (let y = -Math.ceil(r); y <= r; y++)
+    for (let x = -Math.ceil(r); x <= r; x++) {
+      if (x * x + y * y > r * r + 0.6) continue;
+      const t = x + y;
+      set(g, cx + x, cy + y, t <= -1 ? hi : t >= 2 ? lo : mid);
+    }
+  if (spec) set(g, cx - Math.round(r * 0.4), cy - Math.round(r * 0.4), "fs");
+}
+function blades(g: Grid, cx: number, yTop: number, yBot: number, dxs: number[], topSlot: Slot, midSlot: Slot) {
+  for (const dx of dxs)
+    for (let y = yTop; y <= yBot; y++) {
+      const lean = Math.round((dx * 0.18 * (yBot - y)) / (yBot - yTop) * 3);
+      set(g, cx + dx + lean, y, y < yTop + 3 ? topSlot : midSlot);
+    }
+}
+function fruits(g: Grid, list: number[][], r: number, ripe?: boolean) {
+  const slots: [Slot, Slot, Slot] = ripe ? ["fh", "fm", "fl"] : ["lm", "ll", "ld"];
+  const rr = ripe ? r : Math.max(1, r - 0.6);
+  for (const [fx, fy] of list) { disc(g, fx, fy, rr + 1, ["ld", "ld", "ld"]); disc(g, fx, fy, rr, slots, ripe); }
+}
+function blossoms(g: Grid, list: number[][]) { for (const [x, y] of list) { set(g, x, y, "bm"); set(g, x, y - 1, "bh"); set(g, x - 1, y, "bm"); set(g, x + 1, y, "bm"); set(g, x, y + 1, "bm"); } }
+function buds(g: Grid, list: number[][]) { for (const [x, y] of list) { set(g, x, y, "ld"); set(g, x, y - 1, "bm"); } }
+/** One tapered leaf radiating from (bx,by): dark edges separate it, light midrib. */
+function leafBlade(g: Grid, bx: number, by: number, ang: number, len: number, w0: number) {
+  const ax = Math.sin(ang), ay = -Math.cos(ang), px = Math.cos(ang), py = Math.sin(ang);
+  const steps = Math.max(6, Math.round(len));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps, cxp = bx + ax * len * t, cyp = by + ay * len * t;
+    const wi = Math.round(w0 * Math.sin(Math.min(1, t * 1.2) * Math.PI * 0.9));
+    for (let d = -wi; d <= wi; d++) {
+      const x = Math.round(cxp + px * d), y = Math.round(cyp + py * d);
+      let s = d <= -wi || d >= wi ? "ld" : d < 0 ? "lm" : "ll";
+      if (d === 0 && t > 0.06) s = t < 0.85 ? "lh" : "lm";
+      set(g, x, y, s);
+    }
+  }
+}
+/** Little curling tendril ("spindly bit") for vining plants. */
+function tendril(g: Grid, x: number, y: number, dir: number) {
+  set(g, x, y, "sm"); set(g, x + dir, y - 1, "sl"); set(g, x + dir * 2, y - 1, "sl");
+  set(g, x + dir * 2, y, "sm"); set(g, x + dir, y + 1, "sm");
+}
+function outline(g: Grid) {
+  const f = (x: number, y: number) => x >= 0 && x < SZ && y >= 0 && y < SZ && g[y][x] && g[y][x] !== "ol";
+  const add: [number, number][] = [];
+  for (let y = 0; y < SZ; y++)
+    for (let x = 0; x < SZ; x++)
+      if (!g[y][x] && (f(x - 1, y) || f(x + 1, y) || f(x, y - 1) || f(x, y + 1))) add.push([x, y]);
+  for (const [x, y] of add) g[y][x] = "ol";
+}
+/** Shrink mature content toward bottom-center by factor t (growth scaling). */
+function scaleGrid(src: Grid, t: number): Grid {
+  if (t >= 0.999) return src;
+  const dst = newGrid();
+  const cx = 16, by = 30;
+  for (let y = 0; y < SZ; y++)
+    for (let x = 0; x < SZ; x++) {
+      const sx = Math.round(cx + (x - cx) / t), sy = Math.round(by - (by - y) / t);
+      if (sx >= 0 && sx < SZ && sy >= 0 && sy < SZ && src[sy][sx]) dst[y][x] = src[sy][sx];
+    }
+  return dst;
+}
+const LEAF_TO_SENESCENT: Record<string, string> = { lh: "yh", lm: "ym", ll: "yl", ld: "yl" };
+function senesce(g: Grid) {
+  for (let y = 0; y < SZ; y++)
+    for (let x = 0; x < SZ; x++) {
+      const s = g[y][x];
+      if (s && LEAF_TO_SENESCENT[s]) g[y][x] = LEAF_TO_SENESCENT[s];
+    }
+}
+
+// -- archetype builders: build(g, o), o = {bud, bloom, fruit:"set"|"ripe"} -----
+const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
+  bush(g, o) {
+    stem(g, 16, 28, 15);
+    foliage(g, [[16, 12, 9], [9, 12, 5.5], [23, 12, 5.5], [11, 7, 4.8], [21, 7, 4.8], [16, 5, 5.2], [8, 17, 4.6], [24, 17, 4.6], [16, 20, 6.2]], 16, 13);
+    if (o.bud) buds(g, [[10, 13], [22, 12], [16, 8], [13, 17], [20, 18]]);
+    if (o.bloom) blossoms(g, [[10, 13], [22, 11], [16, 8], [13, 17]]);
+    if (o.fruit) fruits(g, [[10, 18], [22, 16], [16, 22], [23, 22], [13, 13]], 2, o.fruit === "ripe");
+  },
+  root(g) {
+    soilMound(g);
+    for (let y = 14; y < 28; y++) { const w = Math.max(0, Math.round(4.5 - (y - 14) * 0.32)); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "rh" : x >= 2 ? "rl" : "rm"); }
+    for (const ry of [17, 20, 23]) for (let x = -3; x <= 3; x += 2) set(g, 16 + x, ry, "rl");
+    foliage(g, [[16, 9, 3.2], [12, 10, 2.5], [20, 10, 2.5], [14, 6, 2.3], [18, 6, 2.3], [16, 5, 2.6]], 16, 8);
+    for (const [dx, dy] of [[-4, 0], [4, 0], [0, -3], [-2, -2], [2, -2]]) set(g, 16 + dx, 6 + dy, "lh");
+  },
+  vine(g, o) {
+    stem(g, 16, 28, 19); // grounded base
+    foliage(g, [[16, 15, 4], [11, 17, 3], [21, 17, 3], [13, 12, 2.8], [19, 12, 2.8], [16, 11, 3]], 16, 14);
+    // trailing runners along the soil, ending in curly tendrils (spindly bits)
+    for (const [vx, vy] of [[11, 20], [9, 22], [8, 24]]) { set(g, vx, vy, "sm"); set(g, vx, vy + 1, "sl"); }
+    for (const [vx, vy] of [[21, 20], [23, 22], [24, 24]]) { set(g, vx, vy, "sm"); set(g, vx, vy + 1, "sl"); }
+    foliage(g, [[9, 23, 1.9], [24, 23, 1.9]], 16, 23);
+    tendril(g, 7, 23, -1); tendril(g, 25, 23, 1); tendril(g, 22, 10, 1);
+    if (o.bud) buds(g, [[12, 12], [20, 12]]);
+    if (o.bloom) blossoms(g, [[12, 12], [20, 12], [16, 10]]);
+    if (o.fruit) {
+      const ripe = o.fruit === "ripe", n = ripe ? 9 : 6;
+      const hi = ripe ? "fh" : "lm", mi = ripe ? "fm" : "ll", lo = ripe ? "fl" : "ld";
+      for (const [vx, vy] of [[15, 21], [14, 23], [13, 25]]) set(g, vx, vy, "sl"); // vine to the fruit
+      for (let i = 0; i < n; i++) { const x = 12 + i, y = 27; set(g, x, y - 1, i > 0 && i < n - 1 ? hi : mi); set(g, x, y, mi); set(g, x, y + 1, lo); } // cucumber resting on the ground
+    }
+  },
+  tall(g, o) {
+    stem(g, 16, 28, 6);
+    for (const [sy, dir] of [[22, -1], [18, 1], [14, -1], [10, 1]]) foliage(g, [[16 + dir * 4, sy, 3.6]], 16 + dir * 4, sy);
+    if (o.bud) { disc(g, 16, 7, 3, ["fh", "fm", "fl"]); return; }
+    if (o.bloom || o.fruit) {
+      disc(g, 16, 7, 5, ["fh", "fm", "fl"]);
+      const seed = o.fruit === "ripe" ? 4 : o.fruit === "set" ? 3 : 2;
+      disc(g, 16, 7, seed, o.fruit ? ["yl", "ym", "yl"] : ["fd", "fd", "fd"]);
+    }
+  },
+  leafy(g) {
+    stem(g, 16, 28, 26);
+    const leaves = [[-1.15, 11, 2.2], [1.15, 11, 2.2], [-0.7, 14, 2.5], [0.7, 14, 2.5], [-0.3, 15, 2.6], [0.3, 15, 2.6], [0, 16, 2.6]];
+    for (const [ang, len, w] of leaves) leafBlade(g, 16, 26, ang, len, w);
+  },
+  herb(g, o) {
+    stem(g, 16, 28, 18);
+    foliage(g, [[16, 15, 4.5], [12, 16, 3], [20, 16, 3], [14, 12, 2.8], [18, 12, 2.8], [16, 11, 3]], 16, 14);
+    if (o.bud) buds(g, [[13, 11], [19, 11], [16, 9]]);
+    else if (o.bloom || o.fruit) for (const [x, y] of [[13, 11], [19, 11], [16, 9]]) { set(g, x, y, "fm"); set(g, x, y - 1, "fh"); set(g, x + 1, y, "fl"); }
+  },
+  flower(g, o) {
+    stem(g, 16, 28, 12);
+    foliage(g, [[12, 20, 3], [20, 20, 3]], 16, 20);
+    if (o.bud) { disc(g, 16, 10, 2, ["fh", "fm", "fl"]); set(g, 16, 12, "sm"); return; }
+    if (o.bloom || o.fruit) {
+      for (let a = 0; a < 8; a++) { const ang = (a / 8) * Math.PI * 2; disc(g, 16 + Math.round(Math.cos(ang) * 4), 9 + Math.round(Math.sin(ang) * 4), 1.7, ["fh", "fm", "fl"]); }
+      disc(g, 16, 9, o.fruit === "ripe" ? 3 : 2, o.fruit === "ripe" ? ["yl", "yl", "yl"] : ["fd", "fd", "fd"]);
+    } else {
+      foliage(g, [[16, 11, 3]], 16, 11);
+    }
+  },
+  bulb(g) {
+    soilMound(g);
+    blades(g, 16, 4, 20, [-3, -1, 1, 3], "lh", "lm");
+    disc(g, 16, 23, 4, ["rh", "rm", "rl"], true);
+  },
+  climbing(g, o) {
+    for (let y = 4; y < 29; y++) { set(g, 11, y, "wh"); set(g, 21, y, "wl"); }
+    for (const ry of [8, 16, 24]) for (let x = 11; x <= 21; x++) set(g, x, ry, "wl");
+    foliage(g, [[13, 10, 3], [19, 14, 3], [13, 20, 3], [19, 22, 2.8], [16, 7, 3]], 16, 14);
+    if (o.bud) buds(g, [[15, 12], [18, 18]]);
+    if (o.bloom) blossoms(g, [[15, 12], [18, 18], [13, 16]]);
+    if (o.fruit) {
+      const ripe = o.fruit === "ripe", len = ripe ? 5 : 3, c = ripe ? "fh" : "lm", c2 = ripe ? "fm" : "ll";
+      for (const [fx, fy] of [[15, 17], [18, 10], [13, 21]]) for (let i = 0; i < len; i++) set(g, fx, fy + i, i < 1 ? c : c2);
+    }
+  },
+  grass(g, o) {
+    blades(g, 16, 9, 28, [-7, -5, -3, -1, 1, 3, 5, 7], "lh", "lm");
+    if (o.bloom) for (const dx of [-7, -3, 1, 5]) set(g, 16 + dx, 7, "bm");
+    if (o.fruit) { const ripe = o.fruit === "ripe"; for (const dx of [-7, -3, 1, 5]) disc(g, 16 + dx, 7, ripe ? 1.7 : 1.2, ripe ? ["fh", "fm", "fl"] : ["lm", "ll", "ld"]); }
+  },
+  cob(g, o) {
+    stem(g, 16, 28, 5);
+    for (const dir of [-1, 1]) for (let i = 0; i < 9; i++) { const lx = 16 + dir * (1 + i), ly = 11 + i + Math.round(i * i * 0.05); set(g, lx, ly, i < 5 ? "lm" : "ll"); set(g, lx, ly + 1, "ll"); }
+    if (o.bloom || o.fruit) for (const dx of [-2, -1, 0, 1, 2]) { set(g, 16 + dx, 4, "yh"); set(g, 16 + dx, 3, "yl"); } // tassel
+    if (o.fruit) {
+      if (o.fruit === "ripe") {
+        for (let y = 11; y < 23; y++) for (let x = 16; x <= 22; x++) { const dx = (x - 19) / 3.4, dy = (y - 17) / 6.2; if (dx * dx + dy * dy <= 1) set(g, x, y, y % 2 === 0 ? "fh" : "fm"); }
+        for (let y = 12; y < 23; y++) set(g, 22, y, "fl");
+        set(g, 19, 22, "fl");
+        for (let i = 0; i < 5; i++) { set(g, 16 + i, 21 + Math.round(i * 0.3), "lm"); set(g, 16 + i, 22 + Math.round(i * 0.3), "ll"); }
+        for (const dx of [0, 1, 2]) set(g, 19 + dx, 10, "yh"); // silk
+      } else {
+        for (let y = 13; y < 22; y++) for (let x = 17; x <= 21; x++) { const dx = (x - 19) / 2.8, dy = (y - 17.5) / 5; if (dx * dx + dy * dy <= 1) set(g, x, y, x < 19 ? "lm" : "ll"); }
+      }
+    }
+  },
+  head(g) {
+    foliage(g, [[16, 16, 9]], 16, 16);
+    disc(g, 16, 16, 7, ["lh", "lm", "ll"]);
+    disc(g, 16, 16, 5, ["lm", "lm", "ll"]);
+    disc(g, 16, 16, 3, ["lh", "lm", "ll"]);
+    for (let i = 0; i < 6; i++) { set(g, 16, 10 + i, "ld"); set(g, 10 + i, 16, "ld"); }
+  },
+  gourd(g, o) {
+    // grounded sprawling vine curving from the base out across the soil
+    const path: number[][] = [[16, 27], [15, 25], [14, 23], [13, 21], [13, 19], [14, 18], [16, 17], [18, 16], [20, 16], [22, 16]];
+    for (const [vx, vy] of path) { set(g, vx, vy, "sm"); set(g, vx + 1, vy, "sl"); }
+    foliage(g, [[12, 16, 3.2], [9, 19, 2.8], [22, 14, 3]], 12, 17);
+    set(g, 23, 16, "sl"); set(g, 24, 15, "sm"); set(g, 24, 14, "sm"); set(g, 23, 14, "sl"); // tendril curl
+    if (o.bud) buds(g, [[10, 19], [21, 14]]);
+    if (o.bloom) blossoms(g, [[10, 19], [21, 14], [9, 17]]);
+    if (o.fruit) {
+      const ripe = o.fruit === "ripe", r = ripe ? 6 : 4, cy = 30 - r;
+      for (let y = 17; y <= cy - r; y++) set(g, 18, y, "sm"); // peduncle vine→fruit
+      disc(g, 18, cy, r, ripe ? ["fh", "fm", "fl"] : ["lm", "ll", "ld"], ripe);
+      if (ripe) for (const dx of [-3, 0, 3]) for (let y = -r + 1; y <= r - 1; y++) if (dx * dx + y * y <= r * r) set(g, 18 + dx, cy + y, "fl");
+    }
+  },
+  crown(g, o) {
+    stem(g, 16, 28, 16);
+    foliage(g, [[10, 22, 3.5], [22, 22, 3.5], [12, 19, 3], [20, 19, 3]], 16, 21);
+    if (o.fruit === "ripe") {
+      foliage(g, [[16, 12, 6], [11, 13, 3.5], [21, 13, 3.5], [13, 9, 3], [19, 9, 3], [16, 8, 3.5]], 16, 12);
+      for (let i = 0; i < 22; i++) { const x = 10 + ((i * 7) % 14), y = 8 + ((i * 5) % 9); if ((x - 16) ** 2 + (y - 12) ** 2 < 36) set(g, x, y, "ld"); }
+    } else if (o.bud || o.bloom || o.fruit) {
+      foliage(g, [[16, 14, 4], [12, 15, 2.6], [20, 15, 2.6], [16, 11, 2.8]], 16, 13);
+      for (let i = 0; i < 16; i++) { const x = 12 + ((i * 5) % 9), y = 11 + ((i * 5) % 7); if ((x - 16) ** 2 + (y - 13) ** 2 < 18) set(g, x, y, "ld"); }
+    } else {
+      foliage(g, [[16, 15, 3.5]], 16, 15);
+    }
+  },
+  berry(g, o) {
+    stem(g, 16, 28, 19);
+    foliage(g, [[16, 18, 7], [10, 18, 4.5], [22, 18, 4.5], [13, 14, 4], [19, 14, 4], [16, 12, 4.5], [16, 23, 4.5]], 16, 17);
+    if (o.bud) buds(g, [[11, 17], [19, 17], [15, 13]]);
+    if (o.bloom) blossoms(g, [[11, 17], [19, 17], [15, 13]]);
+    if (o.fruit) fruits(g, [[11, 21], [15, 22], [19, 21], [13, 18], [17, 18], [22, 20]], 1.6, o.fruit === "ripe");
+  },
+  tree(g, o) {
+    for (let y = 16; y < 29; y++) { set(g, 15, y, "sh"); set(g, 16, y, "sm"); set(g, 17, y, "sl"); }
+    set(g, 14, 28, "sl"); set(g, 18, 28, "sl");
+    foliage(g, [[16, 11, 9], [9, 12, 5], [23, 12, 5], [11, 6, 5], [21, 6, 5], [16, 4, 6], [16, 16, 6]], 16, 10);
+    if (o.bud) buds(g, [[10, 10], [22, 10], [16, 5], [13, 14], [20, 14]]);
+    if (o.bloom) blossoms(g, [[10, 10], [22, 9], [16, 5], [13, 14]]);
+    if (o.fruit) fruits(g, [[10, 12], [22, 11], [16, 6], [13, 15], [20, 15], [16, 13]], 2, o.fruit === "ripe");
+  },
+  cane(g, o) {
+    for (const dir of [-1, 1]) for (const k of [0, 1]) {
+      for (let i = 0; i <= 17; i++) { const t = i / 17, x = 16 + dir * Math.round((1 + k) + t * (5 + k * 5)), y = 28 - Math.round(t * 22 - t * t * 6); set(g, x, y, "sm"); set(g, x, y + 1, "sl"); }
+    }
+    foliage(g, [[10, 12, 2.8], [22, 12, 2.8], [13, 8, 2.4], [19, 8, 2.4], [16, 16, 2.6]], 16, 12);
+    const pts = [[10, 12], [22, 12], [13, 9], [19, 9], [16, 7], [12, 16], [20, 16]];
+    if (o.bud) buds(g, pts.slice(0, 3));
+    if (o.bloom) blossoms(g, pts.slice(0, 4));
+    if (o.fruit) fruits(g, pts, 1.5, o.fruit === "ripe");
+  },
+  shrub(g, o) {
+    for (const dx of [-4, 0, 4]) for (let y = 18; y < 29; y++) set(g, 16 + dx, y, "wl");
+    foliage(g, [[16, 12, 8], [9, 14, 4.5], [23, 14, 4.5], [12, 8, 4], [20, 8, 4], [16, 6, 4.5], [16, 17, 5]], 16, 12);
+    if (o.bud) buds(g, [[10, 12], [22, 12], [16, 8], [13, 16], [20, 16]]);
+    if (o.bloom) blossoms(g, [[10, 12], [22, 12], [16, 8], [13, 16]]);
+    if (o.fruit) fruits(g, [[10, 14], [22, 13], [16, 9], [13, 17], [19, 17], [16, 15]], 1.5, o.fruit === "ripe");
+  },
+  succulent(g, o) {
+    const tips = [[16, 7], [9, 11], [23, 11], [11, 17], [21, 17], [13, 8], [19, 8], [16, 19]];
+    for (const [tx, ty] of tips) {
+      for (let i = 0; i <= 14; i++) { const t = i / 14, x = Math.round(16 + (tx - 16) * t), y = Math.round(27 + (ty - 27) * t), w = Math.max(0, Math.round((1 - t) * 1.7)); for (let d = -w; d <= w; d++) set(g, x + d, y, d < 0 ? "lh" : d > 0 ? "ll" : "lm"); }
+    }
+    if (o.bloom || o.fruit) { for (let y = 6; y < 16; y++) set(g, 16, y, "sm"); blossoms(g, [[16, 5], [15, 8], [17, 11]]); }
+  },
+  fern(g) {
+    for (let f = 0; f < 5; f++) {
+      const dir = f - 2;
+      for (let i = 0; i < 15; i++) { const t = i / 14, x = 16 + Math.round(dir * 2.2 * t * (1 + t)), y = 27 - Math.round(i * 1.5); set(g, x, y, "sm"); const tick = Math.max(0, Math.round((1 - t) * 2.2)); for (let d = 1; d <= tick; d++) { set(g, x - d, y + 1, "lm"); set(g, x + d, y, "lh"); } }
+    }
+  },
+  tuber(g, o) {
+    soilMound(g);
+    foliage(g, [[16, 12, 4.5], [11, 13, 3.2], [21, 13, 3.2], [13, 8, 2.8], [19, 8, 2.8], [16, 7, 3]], 16, 11);
+    if (o.bloom) blossoms(g, [[12, 9], [20, 9], [16, 6]]);
+    if (o.fruit) { const ripe = o.fruit === "ripe"; for (const [tx, ty] of [[12, 25], [20, 25], [16, 27]]) disc(g, tx, ty, ripe ? 3 : 2, ripe ? ["rh", "rm", "rl"] : ["lm", "ll", "ld"], ripe); }
+  },
+  stalk(g, o) {
+    for (const dx of [-5, -2, 1, 4]) { for (let y = 10; y < 29; y++) { set(g, 16 + dx, y, "sh"); set(g, 16 + dx + 1, y, "sl"); } foliage(g, [[16 + dx, 9, 2.4]], 16 + dx, 9); }
+    if (o.bloom || o.fruit) foliage(g, [[16, 8, 3.5], [12, 9, 2.4], [20, 9, 2.4]], 16, 8);
+  },
+  cactus(g, o) {
+    disc(g, 16, 22, 5, ["lh", "lm", "ll"]);
+    disc(g, 11, 14, 4, ["lh", "lm", "ll"]);
+    disc(g, 21, 13, 4, ["lh", "lm", "ll"]);
+    for (const [sx, sy] of [[14, 20], [18, 24], [16, 18], [9, 13], [13, 12], [21, 10], [23, 15]]) set(g, sx, sy, "bh");
+    if (o.bloom) blossoms(g, [[11, 9], [21, 8], [16, 16]]);
+    if (o.fruit) fruits(g, [[11, 9], [21, 8], [16, 16]], 1.8, o.fruit === "ripe");
+  },
+  sprouts(g, o) {
+    for (let y = 6; y < 29; y++) { set(g, 15, y, "sh"); set(g, 16, y, "sm"); set(g, 17, y, "sl"); }
+    foliage(g, [[16, 6, 4], [12, 8, 2.6], [20, 8, 2.6]], 16, 6);
+    if (o.fruit) { const ripe = o.fruit === "ripe"; for (const [sx, sy] of [[13, 12], [19, 14], [13, 18], [19, 20], [13, 24], [19, 26]]) disc(g, sx, sy, ripe ? 2 : 1.4, ["lh", "lm", "ll"]); }
+    else if (o.bloom || o.bud) for (const [sx, sy] of [[14, 13], [18, 17], [14, 21], [18, 25]]) set(g, sx, sy, "ll");
+  },
+  mat(g, o) {
+    foliage(g, [[16, 24, 6], [8, 25, 4], [24, 25, 4], [12, 22, 3.5], [20, 22, 3.5], [16, 21, 4]], 16, 24);
+    for (const x of [5, 27]) { set(g, x, 27, "sl"); set(g, x, 26, "sm"); }
+    if (o.bud) buds(g, [[10, 22], [22, 22], [16, 20]]);
+    if (o.bloom) blossoms(g, [[10, 22], [22, 22], [16, 20], [13, 24], [19, 24]]);
+    if (o.fruit) fruits(g, [[10, 23], [22, 23], [16, 21], [13, 25], [19, 25]], 1.4, o.fruit === "ripe");
+  },
+};
+
+// shared young/late stages (archetype-independent)
+function seed(g: Grid) { mound(g); set(g, 15, 27, "ol"); set(g, 16, 27, "sl"); set(g, 16, 26, "sm"); }
+function sprout0(g: Grid) { mound(g); set(g, 16, 27, "sm"); set(g, 16, 26, "sm"); set(g, 16, 25, "lm"); set(g, 15, 25, "lh"); set(g, 17, 26, "ll"); }
+function sprout1(g: Grid) { mound(g); stem(g, 16, 28, 24); foliage(g, [[14, 23, 2.2], [18, 23, 2.2]], 16, 23); }
+function stub(g: Grid) { mound(g); for (let y = 22; y < 29; y++) { set(g, 15, y, "wh"); set(g, 16, y, "wl"); } }
+
+// ---------------- stage model ----------------
+type Growth =
+  | { kind: "seed" | "sprout0" | "sprout1" | "stub" | "senesce" }
+  | { kind: "grow"; t: number; o: Produce };
+
+const GROWTH: Record<StageKey, Growth> = {
+  planted: { kind: "seed" },
+  germination: { kind: "sprout0" },
+  sprout: { kind: "sprout1" },
+  seedling: { kind: "grow", t: 0.55, o: {} },
+  vegetative: { kind: "grow", t: 0.78, o: {} },
+  budding: { kind: "grow", t: 0.86, o: { bud: true } },
+  flowering: { kind: "grow", t: 0.95, o: { bloom: true } },
+  fruiting: { kind: "grow", t: 0.99, o: { fruit: "set" } },
+  harvest: { kind: "grow", t: 1, o: { fruit: "ripe" } },
+  senescence: { kind: "senesce" },
+  dormant: { kind: "stub" },
+};
+
+/** Build the 32×32 slot grid for a shape archetype at a growth stage. */
+export function generateGrid(shape: SpriteShape, stage: StageKey): Grid {
+  const G = GROWTH[stage];
+  switch (G.kind) {
+    case "seed": { const g = newGrid(); seed(g); outline(g); return g; }
+    case "sprout0": { const g = newGrid(); sprout0(g); outline(g); return g; }
+    case "sprout1": { const g = newGrid(); sprout1(g); outline(g); return g; }
+    case "stub": { const g = newGrid(); stub(g); outline(g); return g; }
+    case "senesce": {
+      const m = newGrid();
+      BUILDERS[shape](m, {});
+      senesce(m);
+      const g = scaleGrid(m, 0.9);
+      mound(g); outline(g);
+      return g;
+    }
+    case "grow": {
+      // build mature (no mound), scale toward soil, add mound, outline
+      const m = newGrid();
+      BUILDERS[shape](m, G.o);
+      const g = scaleGrid(m, G.t);
+      mound(g); outline(g);
+      return g;
+    }
+  }
+}
