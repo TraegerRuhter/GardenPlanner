@@ -516,3 +516,51 @@ const AUDIT = Object.keys(SHOWCASE);
 auditSheet(AUDIT.slice(0, 9), "/tmp/audit1.png", "Audit 1/3 — shapes 1-9 × all stages");
 auditSheet(AUDIT.slice(9, 17), "/tmp/audit2.png", "Audit 2/3 — shapes 10-17 × all stages");
 auditSheet(AUDIT.slice(17, 25), "/tmp/audit3.png", "Audit 3/3 — shapes 18-25 × all stages");
+
+// ---------------- PROTOTYPE: harvested-item ("fruit only") icons --------------
+// Centered single produce item per archetype; recolors via accent like the plants.
+const PROD_ITEM = {
+  roundfruit(g) { disc(g, 16, 18, 7, ["fh", "fm", "fl"], true); for (let y = 9; y < 12; y++) set(g, 16, y, "sm"); set(g, 18, 10, "lh"); set(g, 19, 9, "lm"); },
+  carrot(g) { for (let y = 9; y < 27; y++) { const w = Math.max(0, Math.round(5 - (y - 9) * 0.28)); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "rh" : x >= 2 ? "rl" : "rm"); } for (const ry of [12, 16, 20]) for (let x = -3; x <= 3; x += 2) set(g, 16 + x, ry, "rl"); foliage(g, [[16, 6, 2.3], [12, 7, 1.9], [20, 7, 1.9]], 16, 6); },
+  onion(g) { disc(g, 16, 18, 7, ["rh", "rm", "rl"], true); for (const dx of [-3, 0, 3]) for (let y = 12; y <= 24; y++) { if (dx * dx + (y - 18) * (y - 18) * 0.45 < 46) set(g, 16 + dx, y, "rl"); } for (const dx of [-2, 0, 2]) { set(g, 16 + dx, 10, "sm"); set(g, 16 + dx, 9, "sl"); } for (const dx of [-2, 0, 2]) set(g, 16 + dx, 26, "wl"); },
+  cucumber(g) { for (let i = 0; i < 18; i++) { const x = 8 + i, y = 22 - Math.round(i * 0.45); set(g, x, y, "fm"); set(g, x, y - 1, i > 0 && i < 17 ? "fh" : "fm"); set(g, x, y + 1, "fl"); } for (let i = 3; i < 15; i += 3) set(g, 8 + i, 21 - Math.round(i * 0.45), "fl"); },
+  pumpkin(g) { disc(g, 16, 19, 9, ["fh", "fm", "fl"], true); for (const dx of [-5, -2, 1, 4]) for (let y = -7; y <= 7; y++) if (dx * dx + y * y <= 81) set(g, 16 + dx, 19 + y, "fl"); set(g, 16, 9, "wl"); set(g, 17, 9, "wh"); set(g, 16, 10, "wl"); },
+  cabbage(g) { disc(g, 16, 17, 9, ["lh", "lm", "ll"]); disc(g, 16, 17, 6, ["lm", "lm", "ll"]); disc(g, 16, 17, 3, ["lh", "lm", "ll"]); for (let i = 0; i < 7; i++) { set(g, 16, 11 + i, "ld"); set(g, 11 + i, 17, "ld"); } },
+  broccoli(g) { foliage(g, [[16, 13, 6], [11, 14, 3.5], [21, 14, 3.5], [13, 9, 3], [19, 9, 3], [16, 8, 3.5]], 16, 12); for (let i = 0; i < 24; i++) { const x = 10 + ((i * 7) % 14), y = 8 + ((i * 5) % 9); if ((x - 16) ** 2 + (y - 12) ** 2 < 36) set(g, x, y, "ld"); } for (let y = 18; y < 27; y++) for (let x = 14; x <= 18; x++) set(g, x, y, x < 16 ? "sh" : x < 17 ? "sm" : "sl"); },
+  corn(g) { for (let y = 8; y < 26; y++) for (let x = 13; x <= 20; x++) { const dx = (x - 16.5) / 4, dy = (y - 17) / 9; if (dx * dx + dy * dy <= 1) set(g, x, y, y % 2 === 0 ? "fh" : "fm"); } for (let y = 9; y < 25; y++) set(g, 20, y, "fl"); for (let y = 11; y < 27; y++) { set(g, 12, y, "ll"); set(g, 11, y + 1, "ld"); } set(g, 13, 7, "yh"); set(g, 15, 6, "yh"); },
+  peapod(g) { for (let i = 0; i < 17; i++) { const x = 8 + i, y = 18 + Math.round(Math.sin((i / 16) * Math.PI) * -5); set(g, x, y, "fm"); set(g, x, y - 1, "fh"); set(g, x, y + 1, "fl"); } for (let i = 2; i < 15; i += 3) { const x = 8 + i, y = 18 + Math.round(Math.sin((i / 16) * Math.PI) * -5); set(g, x, y, "fh"); set(g, x, y + 1, "fm"); } },
+  berries(g) { for (const [bx, by] of [[12, 14], [20, 14], [16, 12], [13, 20], [19, 20], [16, 22]]) disc(g, bx, by, 2.6, ["fh", "fm", "fl"], true); for (let y = 8; y < 12; y++) set(g, 16, y, "sm"); },
+  potato(g) { disc(g, 16, 17, 8, ["rh", "rm", "rl"], true); for (const [ex, ey] of [[12, 14], [20, 15], [14, 21], [19, 20]]) { set(g, ex, ey, "rl"); set(g, ex + 1, ey, "rl"); } },
+  strawberry(g) { for (let y = 12; y < 27; y++) { const t = (y - 12) / 15, w = Math.round((1 - t) * 7 + 1); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "fh" : x >= 2 ? "fl" : "fm"); } for (const [sx, sy] of [[13, 16], [19, 16], [15, 19], [18, 20], [16, 22], [14, 23]]) set(g, sx, sy, "bm"); foliage(g, [[16, 10, 2.6], [13, 11, 1.8], [19, 11, 1.8]], 16, 10); set(g, 16, 8, "sm"); },
+};
+const PRODUCE = [
+  { n: "tomato", d: "roundfruit", p: { ...BP, f: "#d23c2e", F: "#a02a20" } },
+  { n: "carrot", d: "carrot", p: { ...BP, f: "#e88a2e", F: "#c06a1e" } },
+  { n: "onion", d: "onion", p: { ...BP, f: "#c9a26a", F: "#a8854f" } },
+  { n: "cucumber", d: "cucumber", p: { ...BP, f: "#3f8f4f", F: "#2f6f3e" } },
+  { n: "pumpkin", d: "pumpkin", p: { ...BP, f: "#e0701f", F: "#b4540f" } },
+  { n: "cabbage", d: "cabbage", p: { ...BP, l: "#86c060", L: "#5f9440", f: "#86c060", F: "#5f9440" } },
+  { n: "broccoli", d: "broccoli", p: { ...BP, l: "#3f8f4f", L: "#2f6f3e", f: "#3f8f4f", F: "#2f6f3e" } },
+  { n: "corn", d: "corn", p: { ...BP, f: "#e8c84a", F: "#c2a52e" } },
+  { n: "peas", d: "peapod", p: { ...BP, f: "#7ab648", F: "#5c9233" } },
+  { n: "blueberry", d: "berries", p: { ...BP, f: "#5566b0", F: "#3a4684" } },
+  { n: "potato", d: "potato", p: { ...BP, f: "#c9a26a", F: "#9a774a" } },
+  { n: "strawberry", d: "strawberry", p: { ...BP, f: "#e23b4b", F: "#b22a38" } },
+];
+const PCOLS = 4, PSC = 4, PSP = 128, PCW = 136, PCH = 152, PPAD = 12, PTOP = 34;
+const prows = Math.ceil(PRODUCE.length / PCOLS);
+const psheet = createCanvas(PCOLS * PCW + PPAD * 2, prows * PCH + PTOP + PPAD);
+const px2 = psheet.getContext("2d");
+ px2.fillStyle = "#cdbfa6"; px2.fillRect(0, 0, psheet.width, psheet.height);
+ px2.imageSmoothingEnabled = false;
+ px2.fillStyle = "#2a1d13"; px2.font = "bold 18px sans-serif";
+ px2.fillText("PROTOTYPE — harvested-item icons (recolor per crop)", PPAD, 24);
+PRODUCE.forEach((it, i) => {
+  const c = i % PCOLS, r = (i / PCOLS) | 0, x = PPAD + c * PCW, y = PTOP + r * PCH;
+  const g = newGrid(); PROD_ITEM[it.d](g); outline(g);
+   px2.drawImage(renderGrid(g, appPalette(it.p), PSC), x + (PCW - PSP) / 2, y, PSP, PSP);
+   px2.fillStyle = "#2a1d13"; px2.font = "12px sans-serif";
+   px2.fillText(it.n, x + (PCW - PSP) / 2 + 2, y + PSP + 12);
+});
+writeFileSync("/tmp/produce.png", psheet.toBuffer("image/png"));
+console.log("wrote /tmp/produce.png", psheet.width + "x" + psheet.height);
