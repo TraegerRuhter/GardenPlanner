@@ -111,4 +111,22 @@ export const families: PlantFamily[] = [
     rotationGroup: "fruiting",
     notes: "Prickly pear and relatives. Drought-hardy pads; mind the glochids.",
   },
+  {
+    id: "moraceae",
+    commonName: "Mulberry family",
+    rotationGroup: "fruiting",
+    notes: "Fig and mulberry. Warm-climate trees; latex sap.",
+  },
+  {
+    id: "grossulariaceae",
+    commonName: "Gooseberry family",
+    rotationGroup: "fruiting",
+    notes: "Currant and gooseberry. Hardy berry shrubs; tolerate part shade.",
+  },
+  {
+    id: "vitaceae",
+    commonName: "Grape family",
+    rotationGroup: "fruiting",
+    notes: "Grapes. Long-lived woody vines; train on a trellis and prune hard.",
+  },
 ];

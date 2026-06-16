@@ -215,6 +215,13 @@ const ACCENTS: Record<string, Partial<Palette>> = {
   aloe_vera: { f: "#e8703a", F: "#bd5526", l: "#6fae84", L: "#4c8a64" }, // blue-green pads
 
   prickly_pear: { f: "#c0407a", F: "#922f5c" },
+  // tranche 10 (more perennial fruit + creeping herb)
+  cherry: { f: "#a01828", F: "#7a101c" },
+  fig: { f: "#6a4a6e", F: "#4a3050" },
+  currant: { f: "#9a1f3a", F: "#6e1428" },
+  gooseberry: { f: "#9ab84a", F: "#76902e" },
+  grape: { f: "#6a3a8a", F: "#4a2860" },
+  thyme: { f: "#9a7cc0", F: "#745aa0" },
 };
 
 /** Per-plant sprite shape overrides. */
@@ -376,6 +383,13 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   asparagus: "fern",
   aloe_vera: "succulent",
   prickly_pear: "cactus",
+  // tranche 10 (more perennial fruit + creeping herb)
+  cherry: "tree",
+  fig: "tree",
+  currant: "shrub",
+  gooseberry: "shrub",
+  grape: "climbing",
+  thyme: "mat",
 };
 
 export function setPlantShape(iconKey: string, shape: SpriteShape) {
