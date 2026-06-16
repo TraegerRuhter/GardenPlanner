@@ -81,4 +81,34 @@ export const families: PlantFamily[] = [
     rotationGroup: "root",
     notes: "Sweet potato. Tender vining tubers; grown from slips in warm soil.",
   },
+  {
+    id: "ericaceae",
+    commonName: "Heath family",
+    rotationGroup: "fruiting",
+    notes: "Blueberry and relatives. Need acidic soil (pH 4.5-5.5); shallow-rooted.",
+  },
+  {
+    id: "polygonaceae",
+    commonName: "Knotweed family",
+    rotationGroup: "leafy",
+    notes: "Rhubarb. Perennial; leaf blades are toxic, only the stalks are eaten.",
+  },
+  {
+    id: "asparagaceae",
+    commonName: "Asparagus family",
+    rotationGroup: "root",
+    notes: "Asparagus. Long-lived perennial crowns; harvest spears before they fern out.",
+  },
+  {
+    id: "asphodelaceae",
+    commonName: "Aloe family",
+    rotationGroup: "leafy",
+    notes: "Aloe and relatives. Tender succulents; gritty, fast-draining soil.",
+  },
+  {
+    id: "cactaceae",
+    commonName: "Cactus family",
+    rotationGroup: "fruiting",
+    notes: "Prickly pear and relatives. Drought-hardy pads; mind the glochids.",
+  },
 ];

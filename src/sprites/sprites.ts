@@ -200,6 +200,18 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
   feverfew: { f: "#f0ead0", F: "#ccc6aa" },
   celtuce: { f: "#9bc46a", F: "#79a04a" },
   cutting_celery: { f: "#8fb05a", F: "#6c8a3e" },
+  // tranche 9 (perennial fruit + specialty)
+  apple: { f: "#d6403a", F: "#a82c28" },
+  pear: { f: "#c3d24a", F: "#9aa82e" },
+  raspberry: { f: "#c0304f", F: "#8e2038" },
+  blackberry: { f: "#3a2a4a", F: "#241a30" },
+  blueberry: { f: "#5566b0", F: "#3a4684" },
+  strawberry: { f: "#e23b4b", F: "#b22a38" },
+  potato: { f: "#c9a26a", F: "#9a774a" },
+  rhubarb: { f: "#c0392b", F: "#8e2b20" },
+  asparagus: { f: "#6aa83f", F: "#4f8a2c" },
+  aloe_vera: { f: "#e8703a", F: "#bd5526" },
+  prickly_pear: { f: "#c0407a", F: "#922f5c" },
 };
 
 /** Per-plant sprite shape overrides. */
@@ -349,6 +361,18 @@ const DEFAULT_SHAPES: Record<string, SpriteShape> = {
   feverfew: "flower",
   celtuce: "stalk",
   cutting_celery: "herb",
+  // tranche 9 (perennial fruit + specialty)
+  apple: "tree",
+  pear: "tree",
+  raspberry: "cane",
+  blackberry: "cane",
+  blueberry: "shrub",
+  strawberry: "mat",
+  potato: "tuber",
+  rhubarb: "stalk",
+  asparagus: "fern",
+  aloe_vera: "succulent",
+  prickly_pear: "cactus",
 };
 
 export function setPlantShape(iconKey: string, shape: SpriteShape) {
