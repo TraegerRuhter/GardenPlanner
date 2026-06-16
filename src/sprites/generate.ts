@@ -16,8 +16,10 @@ export const GRID_SIZE = 32;
 type Slot = string;
 type Grid = (Slot | null)[][];
 interface Produce {
-  fruit?: boolean;
+  bud?: boolean;
   bloom?: boolean;
+  /** "set" = small green unripe produce; "ripe" = full accent-colored produce. */
+  fruit?: "set" | "ripe";
 }
 
 /** Colors needed to derive the slot palette (structurally a subset of Palette). */
@@ -94,6 +96,7 @@ export function buildSlotPalette(p: SourcePalette): Record<Slot, string> {
     kh: p.m, kl: p.M,
     wh: shift(p.w, +0.1), wl: shift(p.w, -0.13),
     yh: shift(p.y, +0.1), ym: p.y, yl: shift(p.y, -0.14),
+    bh: "#fdf3da", bm: "#f4d676",
     ol: "#241813",
   };
 }
@@ -145,15 +148,13 @@ function blades(g: Grid, cx: number, yTop: number, yBot: number, dxs: number[], 
       set(g, cx + dx + lean, y, y < yTop + 3 ? topSlot : midSlot);
     }
 }
-function fruits(g: Grid, list: number[][], r = 2) {
-  for (const [fx, fy] of list) {
-    disc(g, fx, fy, r + 1, ["ld", "ld", "ld"]);
-    disc(g, fx, fy, r, ["fh", "fm", "fl"], true);
-  }
+function fruits(g: Grid, list: number[][], r: number, ripe?: boolean) {
+  const slots: [Slot, Slot, Slot] = ripe ? ["fh", "fm", "fl"] : ["lm", "ll", "ld"];
+  const rr = ripe ? r : Math.max(1, r - 0.6);
+  for (const [fx, fy] of list) { disc(g, fx, fy, rr + 1, ["ld", "ld", "ld"]); disc(g, fx, fy, rr, slots, ripe); }
 }
-function blooms(g: Grid, list: number[][]) {
-  for (const [fx, fy] of list) { set(g, fx, fy, "fm"); set(g, fx, fy - 1, "fh"); set(g, fx + 1, fy, "fl"); }
-}
+function blossoms(g: Grid, list: number[][]) { for (const [x, y] of list) { set(g, x, y, "bm"); set(g, x, y - 1, "bh"); set(g, x - 1, y, "bm"); set(g, x + 1, y, "bm"); set(g, x, y + 1, "bm"); } }
+function buds(g: Grid, list: number[][]) { for (const [x, y] of list) { set(g, x, y, "ld"); set(g, x, y - 1, "bm"); } }
 function outline(g: Grid) {
   const f = (x: number, y: number) => x >= 0 && x < SZ && y >= 0 && y < SZ && g[y][x] && g[y][x] !== "ol";
   const add: [number, number][] = [];
@@ -183,13 +184,14 @@ function senesce(g: Grid) {
     }
 }
 
-// ---------------- archetype builders: build(g, o) where o = {fruit, bloom} ----
+// -- archetype builders: build(g, o), o = {bud, bloom, fruit:"set"|"ripe"} -----
 const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
   bush(g, o) {
     stem(g, 16, 28, 15);
     foliage(g, [[16, 12, 9], [9, 12, 5.5], [23, 12, 5.5], [11, 7, 4.8], [21, 7, 4.8], [16, 5, 5.2], [8, 17, 4.6], [24, 17, 4.6], [16, 20, 6.2]], 16, 13);
-    if (o.bloom) blooms(g, [[10, 13], [22, 12], [16, 8]]);
-    if (o.fruit) fruits(g, [[10, 18], [22, 16], [16, 22], [23, 22], [13, 13]]);
+    if (o.bud) buds(g, [[10, 13], [22, 12], [16, 8], [13, 17], [20, 18]]);
+    if (o.bloom) blossoms(g, [[10, 13], [22, 11], [16, 8], [13, 17]]);
+    if (o.fruit) fruits(g, [[10, 18], [22, 16], [16, 22], [23, 22], [13, 13]], 2, o.fruit === "ripe");
   },
   root(g) {
     soilBand(g, 21);
@@ -201,16 +203,25 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
   vine(g, o) {
     for (let x = 8; x < 24; x++) set(g, x, 16, "sl");
     foliage(g, [[11, 13, 3], [16, 11, 3.5], [21, 13, 3], [14, 15, 2.4], [19, 15, 2.4]], 16, 12);
+    if (o.bud) buds(g, [[12, 15], [20, 15]]);
+    if (o.bloom) blossoms(g, [[12, 15], [20, 15], [16, 14]]);
     if (o.fruit) {
+      const ripe = o.fruit === "ripe", n = ripe ? 12 : 8;
+      const hi = ripe ? "fh" : "lm", mi = ripe ? "fm" : "ll", lo = ripe ? "fl" : "ld";
       for (const [vx, vy] of [[16, 17], [15, 18], [14, 19], [13, 20]]) set(g, vx, vy, "sl");
-      for (let i = 0; i < 12; i++) { const x = 9 + i, y = 25 - Math.round(i * 0.4); set(g, x, y, "fm"); set(g, x, y - 1, i > 0 && i < 11 ? "fh" : "fm"); set(g, x, y + 1, "fl"); }
-      for (let i = 2; i < 10; i += 3) set(g, 9 + i, 24 - Math.round(i * 0.4), "fl");
+      for (let i = 0; i < n; i++) { const x = 9 + i, y = 25 - Math.round(i * 0.4); set(g, x, y, mi); set(g, x, y - 1, i > 0 && i < n - 1 ? hi : mi); set(g, x, y + 1, lo); }
+      for (let i = 2; i < n - 2; i += 3) set(g, 9 + i, 24 - Math.round(i * 0.4), lo);
     }
   },
   tall(g, o) {
     stem(g, 16, 28, 6);
     for (const [sy, dir] of [[22, -1], [18, 1], [14, -1], [10, 1]]) foliage(g, [[16 + dir * 4, sy, 3.6]], 16 + dir * 4, sy);
-    if (o.bloom || o.fruit) { disc(g, 16, 7, 5, ["fh", "fm", "fl"]); disc(g, 16, 7, 2, ["fd", "fd", "fd"]); }
+    if (o.bud) { disc(g, 16, 7, 3, ["fh", "fm", "fl"]); return; }
+    if (o.bloom || o.fruit) {
+      disc(g, 16, 7, 5, ["fh", "fm", "fl"]);
+      const seed = o.fruit === "ripe" ? 4 : o.fruit === "set" ? 3 : 2;
+      disc(g, 16, 7, seed, o.fruit ? ["yl", "ym", "yl"] : ["fd", "fd", "fd"]);
+    }
   },
   leafy(g) {
     foliage(g, [[16, 18, 7], [9, 17, 4.5], [23, 17, 4.5], [12, 14, 4.5], [20, 14, 4.5], [16, 13, 5]], 16, 16);
@@ -219,14 +230,16 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
   herb(g, o) {
     stem(g, 16, 28, 18);
     foliage(g, [[16, 15, 4.5], [12, 16, 3], [20, 16, 3], [14, 12, 2.8], [18, 12, 2.8], [16, 11, 3]], 16, 14);
-    if (o.bloom || o.fruit) blooms(g, [[13, 11], [19, 11], [16, 9]]);
+    if (o.bud) buds(g, [[13, 11], [19, 11], [16, 9]]);
+    else if (o.bloom || o.fruit) for (const [x, y] of [[13, 11], [19, 11], [16, 9]]) { set(g, x, y, "fm"); set(g, x, y - 1, "fh"); set(g, x + 1, y, "fl"); }
   },
   flower(g, o) {
     stem(g, 16, 28, 12);
     foliage(g, [[12, 20, 3], [20, 20, 3]], 16, 20);
+    if (o.bud) { disc(g, 16, 10, 2, ["fh", "fm", "fl"]); set(g, 16, 12, "sm"); return; }
     if (o.bloom || o.fruit) {
       for (let a = 0; a < 8; a++) { const ang = (a / 8) * Math.PI * 2; disc(g, 16 + Math.round(Math.cos(ang) * 4), 9 + Math.round(Math.sin(ang) * 4), 1.7, ["fh", "fm", "fl"]); }
-      disc(g, 16, 9, 2, ["fd", "fd", "fd"]);
+      disc(g, 16, 9, o.fruit === "ripe" ? 3 : 2, o.fruit === "ripe" ? ["yl", "yl", "yl"] : ["fd", "fd", "fd"]);
     } else {
       foliage(g, [[16, 11, 3]], 16, 11);
     }
@@ -240,22 +253,32 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
     for (let y = 4; y < 29; y++) { set(g, 11, y, "wh"); set(g, 21, y, "wl"); }
     for (const ry of [8, 16, 24]) for (let x = 11; x <= 21; x++) set(g, x, ry, "wl");
     foliage(g, [[13, 10, 3], [19, 14, 3], [13, 20, 3], [19, 22, 2.8], [16, 7, 3]], 16, 14);
-    if (o.fruit) for (const [fx, fy] of [[15, 18], [18, 11]]) for (let i = 0; i < 4; i++) set(g, fx, fy + i, i < 1 ? "fh" : "fm");
+    if (o.bud) buds(g, [[15, 12], [18, 18]]);
+    if (o.bloom) blossoms(g, [[15, 12], [18, 18], [13, 16]]);
+    if (o.fruit) {
+      const ripe = o.fruit === "ripe", len = ripe ? 5 : 3, c = ripe ? "fh" : "lm", c2 = ripe ? "fm" : "ll";
+      for (const [fx, fy] of [[15, 17], [18, 10], [13, 21]]) for (let i = 0; i < len; i++) set(g, fx, fy + i, i < 1 ? c : c2);
+    }
   },
   grass(g, o) {
     blades(g, 16, 9, 28, [-7, -5, -3, -1, 1, 3, 5, 7], "lh", "lm");
-    if (o.fruit) for (const dx of [-7, -3, 1, 5]) disc(g, 16 + dx, 7, 1.7, ["fh", "fm", "fl"]);
+    if (o.bloom) for (const dx of [-7, -3, 1, 5]) set(g, 16 + dx, 7, "bm");
+    if (o.fruit) { const ripe = o.fruit === "ripe"; for (const dx of [-7, -3, 1, 5]) disc(g, 16 + dx, 7, ripe ? 1.7 : 1.2, ripe ? ["fh", "fm", "fl"] : ["lm", "ll", "ld"]); }
   },
   cob(g, o) {
     stem(g, 16, 28, 5);
     for (const dir of [-1, 1]) for (let i = 0; i < 8; i++) set(g, 16 + dir * (1 + i), 12 + i + Math.round(i * i * 0.06), i < 5 ? "lm" : "ll");
+    if (o.bloom || o.fruit) for (const dx of [-2, -1, 0, 1, 2]) { set(g, 16 + dx, 4, "yh"); set(g, 16 + dx, 3, "yl"); } // tassel
     if (o.fruit) {
-      for (let y = 11; y < 23; y++) for (let x = 16; x <= 22; x++) { const dx = (x - 19) / 3.4, dy = (y - 17) / 6.2; if (dx * dx + dy * dy <= 1) set(g, x, y, y % 2 === 0 ? "fh" : "fm"); }
-      for (let y = 12; y < 23; y++) set(g, 22, y, "fl");
-      set(g, 19, 22, "fl");
-      for (let i = 0; i < 5; i++) { set(g, 16 + i, 21 + Math.round(i * 0.3), "lm"); set(g, 16 + i, 22 + Math.round(i * 0.3), "ll"); }
-      for (const dx of [0, 1, 2]) set(g, 19 + dx, 10, "yh");
-      for (const dx of [-2, -1, 0, 1, 2]) { set(g, 16 + dx, 4, "yh"); set(g, 16 + dx, 3, "yl"); }
+      if (o.fruit === "ripe") {
+        for (let y = 11; y < 23; y++) for (let x = 16; x <= 22; x++) { const dx = (x - 19) / 3.4, dy = (y - 17) / 6.2; if (dx * dx + dy * dy <= 1) set(g, x, y, y % 2 === 0 ? "fh" : "fm"); }
+        for (let y = 12; y < 23; y++) set(g, 22, y, "fl");
+        set(g, 19, 22, "fl");
+        for (let i = 0; i < 5; i++) { set(g, 16 + i, 21 + Math.round(i * 0.3), "lm"); set(g, 16 + i, 22 + Math.round(i * 0.3), "ll"); }
+        for (const dx of [0, 1, 2]) set(g, 19 + dx, 10, "yh"); // silk
+      } else {
+        for (let y = 13; y < 22; y++) for (let x = 17; x <= 21; x++) { const dx = (x - 19) / 2.8, dy = (y - 17.5) / 5; if (dx * dx + dy * dy <= 1) set(g, x, y, x < 19 ? "lm" : "ll"); }
+      }
     }
   },
   head(g) {
@@ -266,24 +289,38 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
     for (let i = 0; i < 6; i++) { set(g, 16, 10 + i, "ld"); set(g, 10 + i, 16, "ld"); }
   },
   gourd(g, o) {
-    for (let x = 6; x < 22; x++) set(g, x, 16, "sl");
-    foliage(g, [[9, 12, 3.5], [14, 13, 3], [8, 15, 2.4], [13, 15, 2.4]], 10, 13);
-    if (o.fruit) { disc(g, 20, 22, 6, ["fh", "fm", "fl"], true); for (const dx of [-3, 0, 3]) for (let y = -5; y <= 5; y++) if (dx * dx + y * y <= 36) set(g, 20 + dx, 22 + y, "fl"); }
+    // grounded sprawling vine curving from the base out across the soil
+    const path: number[][] = [[16, 27], [15, 25], [14, 23], [13, 21], [13, 19], [14, 18], [16, 17], [18, 16], [20, 16], [22, 16]];
+    for (const [vx, vy] of path) { set(g, vx, vy, "sm"); set(g, vx + 1, vy, "sl"); }
+    foliage(g, [[12, 16, 3.2], [9, 19, 2.8], [22, 14, 3]], 12, 17);
+    set(g, 23, 16, "sl"); set(g, 24, 15, "sm"); set(g, 24, 14, "sm"); set(g, 23, 14, "sl"); // tendril curl
+    if (o.bud) buds(g, [[10, 19], [21, 14]]);
+    if (o.bloom) blossoms(g, [[10, 19], [21, 14], [9, 17]]);
+    if (o.fruit) {
+      const ripe = o.fruit === "ripe", r = ripe ? 6 : 4, cy = 30 - r;
+      for (let y = 17; y <= cy - r; y++) set(g, 18, y, "sm"); // peduncle vine→fruit
+      disc(g, 18, cy, r, ripe ? ["fh", "fm", "fl"] : ["lm", "ll", "ld"], ripe);
+      if (ripe) for (const dx of [-3, 0, 3]) for (let y = -r + 1; y <= r - 1; y++) if (dx * dx + y * y <= r * r) set(g, 18 + dx, cy + y, "fl");
+    }
   },
   crown(g, o) {
     stem(g, 16, 28, 16);
     foliage(g, [[10, 22, 3.5], [22, 22, 3.5], [12, 19, 3], [20, 19, 3]], 16, 21);
-    if (o.fruit) {
+    if (o.fruit === "ripe") {
       foliage(g, [[16, 12, 6], [11, 13, 3.5], [21, 13, 3.5], [13, 9, 3], [19, 9, 3], [16, 8, 3.5]], 16, 12);
       for (let i = 0; i < 22; i++) { const x = 10 + ((i * 7) % 14), y = 8 + ((i * 5) % 9); if ((x - 16) ** 2 + (y - 12) ** 2 < 36) set(g, x, y, "ld"); }
+    } else if (o.bud || o.bloom || o.fruit) {
+      foliage(g, [[16, 14, 4], [12, 15, 2.6], [20, 15, 2.6], [16, 11, 2.8]], 16, 13);
+      for (let i = 0; i < 16; i++) { const x = 12 + ((i * 5) % 9), y = 11 + ((i * 5) % 7); if ((x - 16) ** 2 + (y - 13) ** 2 < 18) set(g, x, y, "ld"); }
     } else {
       foliage(g, [[16, 15, 3.5]], 16, 15);
     }
   },
   berry(g, o) {
     foliage(g, [[16, 16, 7], [10, 16, 4], [22, 16, 4], [13, 12, 3.5], [19, 12, 3.5], [16, 11, 4]], 16, 15);
-    if (o.bloom) blooms(g, [[11, 16], [19, 16], [15, 13]]);
-    if (o.fruit) fruits(g, [[11, 20], [15, 21], [19, 20], [13, 18], [17, 18], [22, 19]], 1.4);
+    if (o.bud) buds(g, [[11, 16], [19, 16], [15, 13]]);
+    if (o.bloom) blossoms(g, [[11, 16], [19, 16], [15, 13]]);
+    if (o.fruit) fruits(g, [[11, 20], [15, 21], [19, 20], [13, 18], [17, 18], [22, 19]], 1.6, o.fruit === "ripe");
   },
 };
 
@@ -304,10 +341,10 @@ const GROWTH: Record<StageKey, Growth> = {
   sprout: { kind: "sprout1" },
   seedling: { kind: "grow", t: 0.55, o: {} },
   vegetative: { kind: "grow", t: 0.78, o: {} },
-  budding: { kind: "grow", t: 0.9, o: { bloom: true } },
-  flowering: { kind: "grow", t: 0.96, o: { bloom: true } },
-  fruiting: { kind: "grow", t: 0.99, o: { fruit: true } },
-  harvest: { kind: "grow", t: 1, o: { fruit: true } },
+  budding: { kind: "grow", t: 0.86, o: { bud: true } },
+  flowering: { kind: "grow", t: 0.95, o: { bloom: true } },
+  fruiting: { kind: "grow", t: 0.99, o: { fruit: "set" } },
+  harvest: { kind: "grow", t: 1, o: { fruit: "ripe" } },
   senescence: { kind: "senesce" },
   dormant: { kind: "stub" },
 };
@@ -322,7 +359,7 @@ export function generateGrid(shape: SpriteShape, stage: StageKey): Grid {
     case "stub": { const g = newGrid(); stub(g); outline(g); return g; }
     case "senesce": {
       const m = newGrid();
-      BUILDERS[shape](m, { fruit: false, bloom: false });
+      BUILDERS[shape](m, {});
       senesce(m);
       const g = scaleGrid(m, 0.9);
       mound(g); outline(g);

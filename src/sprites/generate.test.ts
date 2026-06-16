@@ -42,9 +42,11 @@ describe("procedural sprite generator", () => {
     expect(pal.ol).toBe("#241813");
   });
 
-  it("gates produce by stage (no fruit while vegetative, fruit at harvest)", () => {
-    expect(has(generateGrid("bush", "vegetative"), "fm")).toBe(false);
-    expect(has(generateGrid("bush", "harvest"), "fm")).toBe(true);
+  it("progresses produce: leaf → blossom → unripe green → ripe accent", () => {
+    expect(has(generateGrid("bush", "vegetative"), "fm")).toBe(false); // leaves only
+    expect(has(generateGrid("bush", "flowering"), "bm")).toBe(true); // pale blossoms
+    expect(has(generateGrid("bush", "fruiting"), "fm")).toBe(false); // unripe fruit is green, no accent
+    expect(has(generateGrid("bush", "harvest"), "fm")).toBe(true); // ripe fruit uses the accent
   });
 
   it("recolors leaves to senescent tones at senescence", () => {
