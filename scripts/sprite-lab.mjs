@@ -432,3 +432,31 @@ NEW.forEach((a, r) => {
 });
 writeFileSync("/tmp/new10.png", nsheet.toBuffer("image/png"));
 console.log("wrote /tmp/new10.png", nsheet.width + "x" + nsheet.height);
+
+// ---------------- full library showcase: all 25 archetypes at harvest --------
+const SHOWCASE = {
+  bush: ["#58a854", "#d23c2e"], root: ["#5fae54", "#e88a2e"], vine: ["#4e9e54", "#3f8f4f"], tall: ["#5aa64f", "#e8c24a"], leafy: ["#7cc35f", "#7cc35f"],
+  herb: ["#5fae54", "#b39ed8"], flower: ["#4e9e54", "#e76fb3"], bulb: ["#6aae5a", "#c9a26a"], climbing: ["#4e9e54", "#6fbf63"], grass: ["#8fae4f", "#d9c26a"],
+  cob: ["#5aa64f", "#e8c84a"], head: ["#86c060", "#86c060"], gourd: ["#4e9e54", "#e0701f"], crown: ["#3f8f4f", "#3f8f4f"], berry: ["#4e9e54", "#c0303a"],
+  tree: ["#4e9e54", "#d6403a"], cane: ["#4e9e54", "#c0304f"], shrub: ["#4e9e54", "#5566b0"], succulent: ["#6fae84", "#e8703a"], fern: ["#4e9e54", "#3a7d44"],
+  tuber: ["#5fae54", "#c9a26a"], stalk: ["#8fb05a", "#8fb05a"], cactus: ["#5aa86a", "#c0407a"], sprouts: ["#4f8a4a", "#4f8a4a"], mat: ["#6a9a5a", "#9a7cc0"],
+};
+const ALL = Object.keys(SHOWCASE);
+const ACOLS = 5, ASC = 3, ASP = 96, ACW = 104, ACH = 116, APAD = 12, ATOP = 34;
+const arows = Math.ceil(ALL.length / ACOLS);
+const asheet = createCanvas(ACOLS * ACW + APAD * 2, arows * ACH + ATOP + APAD);
+const ax = asheet.getContext("2d");
+ax.fillStyle = "#cdbfa6"; ax.fillRect(0, 0, asheet.width, asheet.height);
+ax.imageSmoothingEnabled = false;
+ax.fillStyle = "#2a1d13"; ax.font = "bold 18px sans-serif";
+ax.fillText("Full archetype library — 25 shapes (harvest)", APAD, 24);
+ALL.forEach((shape, i) => {
+  const c = i % ACOLS, r = (i / ACOLS) | 0, x = APAD + c * ACW, y = ATOP + r * ACH;
+  const [l, f] = SHOWCASE[shape];
+  const P = appPalette({ ...BP, l, L: shift(l, -0.12), f, F: shift(f, -0.12) });
+  ax.drawImage(renderGrid(makeGrid(shape, "harvest"), P, ASC), x + (ACW - ASP) / 2, y, ASP, ASP);
+  ax.fillStyle = "#2a1d13"; ax.font = "12px sans-serif";
+  ax.fillText(shape, x + (ACW - ASP) / 2 + 2, y + ASP + 12);
+});
+writeFileSync("/tmp/all25.png", asheet.toBuffer("image/png"));
+console.log("wrote /tmp/all25.png", asheet.width + "x" + asheet.height);
