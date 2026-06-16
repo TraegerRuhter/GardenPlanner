@@ -306,4 +306,15 @@ export const varietals: Varietal[] = [
     colorHex: "#6a2c5f",
     bestFor: ["stir-fries", "curries"],
   },
+  // --- tranche 9: perennial fruit & specialty ---
+  { id: "apple_honeycrisp", plantId: "apple", name: "Honeycrisp", description: "Explosively crisp and juicy, sweet-tart; needs a pollination partner.", traits: ["crisp", "stores well", "scab-susceptible"], colorHex: "#d6403a", flavorNotes: "Sweet-tart, very juicy.", bestFor: ["fresh eating", "cold climates"] },
+  { id: "apple_gala", plantId: "apple", name: "Gala", description: "Mild, sweet, early-bearing dessert apple.", traits: ["sweet", "early", "heavy bearer"], colorHex: "#e2683a", flavorNotes: "Mild and sweet.", bestFor: ["fresh eating", "snacking"] },
+  { id: "apple_granny_smith", plantId: "apple", name: "Granny Smith", description: "Hard, tart green apple; long-storing and great for baking.", traits: ["tart", "late", "long-storing"], colorHex: "#7aa83a", flavorNotes: "Sharp and tart.", bestFor: ["baking", "storage"] },
+  { id: "pear_bartlett", plantId: "pear", name: "Bartlett", description: "Classic buttery summer pear; pick firm and ripen off the tree.", traits: ["aromatic", "soft", "canning"], colorHex: "#c3d24a", flavorNotes: "Sweet and buttery.", bestFor: ["fresh eating", "canning"] },
+  { id: "raspberry_heritage", plantId: "raspberry", name: "Heritage", description: "Reliable everbearing red; heavy fall crop on primocanes.", traits: ["everbearing", "primocane", "vigorous"], colorHex: "#c0304f", flavorNotes: "Bright and tangy.", bestFor: ["fall harvest", "fresh eating"] },
+  { id: "blackberry_triple_crown", plantId: "blackberry", name: "Triple Crown", description: "Thornless, semi-erect; heavy yields of large sweet berries.", traits: ["thornless", "semi-erect", "high-yield"], colorHex: "#3a2a4a", flavorNotes: "Rich and sweet.", bestFor: ["fresh eating", "jam"] },
+  { id: "blueberry_bluecrop", plantId: "blueberry", name: "Bluecrop", description: "Productive midseason highbush standard; adaptable and reliable.", traits: ["highbush", "midseason", "cold-hardy"], colorHex: "#5566b0", flavorNotes: "Balanced sweet-tart.", bestFor: ["fresh eating", "freezing"] },
+  { id: "blueberry_pink_lemonade", plantId: "blueberry", name: "Pink Lemonade", description: "Novelty pink-fruited blueberry; sweet and ornamental.", traits: ["pink-fruited", "ornamental", "self-fertile"], colorHex: "#e58fb0", flavorNotes: "Sweet and mild.", bestFor: ["containers", "ornamental"] },
+  { id: "asparagus_mary_washington", plantId: "asparagus", name: "Mary Washington", description: "Heirloom standard; rust-resistant with uniform green spears.", traits: ["heirloom", "rust-resistant", "productive"], colorHex: "#6aa83f", flavorNotes: "Classic asparagus.", bestFor: ["perennial beds"] },
+  { id: "rhubarb_victoria", plantId: "rhubarb", name: "Victoria", description: "Dependable green-to-red stalks with balanced tartness.", traits: ["vigorous", "tender stalks"], colorHex: "#c0392b", flavorNotes: "Tart.", bestFor: ["pies", "preserves"] },
 ];
