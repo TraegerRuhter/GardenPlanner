@@ -114,8 +114,12 @@ function mound(g: Grid) {
   for (let x = 10; x < 22; x++) set(g, x, 29, "kh");
   for (let x = 13; x < 19; x++) set(g, x, 28, "kl");
 }
-function soilBand(g: Grid, y: number) {
-  for (let x = 4; x < 28; x++) { set(g, x, y, "kh"); set(g, x, y + 1, "kl"); }
+/** Rounded mound of soil for crops whose yield sits in/under the ground. */
+function soilMound(g: Grid) {
+  for (let x = 5; x <= 27; x++) {
+    const dx = (x - 16) / 11, top = 21 + Math.round(dx * dx * 5);
+    for (let y = top; y <= 30; y++) set(g, x, y, y <= top + 1 ? "kh" : "kl");
+  }
 }
 function stem(g: Grid, x0: number, yBot: number, yTop: number) {
   for (let y = yTop; y <= yBot; y++) { set(g, x0 - 1, y, "sh"); set(g, x0, y, "sm"); set(g, x0 + 1, y, "sl"); }
@@ -194,11 +198,11 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
     if (o.fruit) fruits(g, [[10, 18], [22, 16], [16, 22], [23, 22], [13, 13]], 2, o.fruit === "ripe");
   },
   root(g) {
-    soilBand(g, 21);
-    for (let y = 16; y < 29; y++) { const w = Math.max(0, Math.round(5 - (y - 16) * 0.42)); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "rh" : x >= 2 ? "rl" : "rm"); }
-    for (const ry of [19, 22, 25]) for (let x = -3; x <= 3; x += 2) set(g, 16 + x, ry, "rl");
-    foliage(g, [[16, 11, 3.4], [12, 12, 2.6], [20, 12, 2.6], [14, 8, 2.4], [18, 8, 2.4], [16, 7, 2.8]], 16, 10);
-    for (const [dx, dy] of [[-4, -1], [4, -1], [0, -4], [-2, -3], [2, -3]]) set(g, 16 + dx, 8 + dy, "lh");
+    soilMound(g);
+    for (let y = 14; y < 28; y++) { const w = Math.max(0, Math.round(4.5 - (y - 14) * 0.32)); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "rh" : x >= 2 ? "rl" : "rm"); }
+    for (const ry of [17, 20, 23]) for (let x = -3; x <= 3; x += 2) set(g, 16 + x, ry, "rl");
+    foliage(g, [[16, 9, 3.2], [12, 10, 2.5], [20, 10, 2.5], [14, 6, 2.3], [18, 6, 2.3], [16, 5, 2.6]], 16, 8);
+    for (const [dx, dy] of [[-4, 0], [4, 0], [0, -3], [-2, -2], [2, -2]]) set(g, 16 + dx, 6 + dy, "lh");
   },
   vine(g, o) {
     for (let x = 8; x < 24; x++) set(g, x, 16, "sl");
@@ -206,11 +210,11 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
     if (o.bud) buds(g, [[12, 15], [20, 15]]);
     if (o.bloom) blossoms(g, [[12, 15], [20, 15], [16, 14]]);
     if (o.fruit) {
-      const ripe = o.fruit === "ripe", n = ripe ? 12 : 8;
+      const ripe = o.fruit === "ripe", n = ripe ? 11 : 8;
       const hi = ripe ? "fh" : "lm", mi = ripe ? "fm" : "ll", lo = ripe ? "fl" : "ld";
-      for (const [vx, vy] of [[16, 17], [15, 18], [14, 19], [13, 20]]) set(g, vx, vy, "sl");
-      for (let i = 0; i < n; i++) { const x = 9 + i, y = 25 - Math.round(i * 0.4); set(g, x, y, mi); set(g, x, y - 1, i > 0 && i < n - 1 ? hi : mi); set(g, x, y + 1, lo); }
-      for (let i = 2; i < n - 2; i += 3) set(g, 9 + i, 24 - Math.round(i * 0.4), lo);
+      for (const [vx, vy] of [[15, 17], [14, 19], [13, 21], [12, 23]]) set(g, vx, vy, "sl"); // vine drops to the fruit
+      for (let i = 0; i < n; i++) { const x = 12 + i, y = 25 - Math.round(i * 0.3); set(g, x, y, mi); set(g, x, y - 1, i > 0 && i < n - 1 ? hi : mi); set(g, x, y + 1, lo); }
+      for (let i = 2; i < n - 2; i += 3) set(g, 12 + i, 24 - Math.round(i * 0.3), lo);
     }
   },
   tall(g, o) {
@@ -245,9 +249,9 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
     }
   },
   bulb(g) {
-    soilBand(g, 22);
-    blades(g, 16, 6, 21, [-3, -1, 1, 3], "lh", "lm");
-    disc(g, 16, 24, 4, ["rh", "rm", "rl"], true);
+    soilMound(g);
+    blades(g, 16, 4, 20, [-3, -1, 1, 3], "lh", "lm");
+    disc(g, 16, 23, 4, ["rh", "rm", "rl"], true);
   },
   climbing(g, o) {
     for (let y = 4; y < 29; y++) { set(g, 11, y, "wh"); set(g, 21, y, "wl"); }
@@ -267,7 +271,7 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
   },
   cob(g, o) {
     stem(g, 16, 28, 5);
-    for (const dir of [-1, 1]) for (let i = 0; i < 8; i++) set(g, 16 + dir * (1 + i), 12 + i + Math.round(i * i * 0.06), i < 5 ? "lm" : "ll");
+    for (const dir of [-1, 1]) for (let i = 0; i < 9; i++) { const lx = 16 + dir * (1 + i), ly = 11 + i + Math.round(i * i * 0.05); set(g, lx, ly, i < 5 ? "lm" : "ll"); set(g, lx, ly + 1, "ll"); }
     if (o.bloom || o.fruit) for (const dx of [-2, -1, 0, 1, 2]) { set(g, 16 + dx, 4, "yh"); set(g, 16 + dx, 3, "yl"); } // tassel
     if (o.fruit) {
       if (o.fruit === "ripe") {
@@ -361,9 +365,9 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
     }
   },
   tuber(g, o) {
-    soilBand(g, 21);
-    foliage(g, [[16, 13, 4.5], [11, 14, 3.2], [21, 14, 3.2], [13, 9, 2.8], [19, 9, 2.8], [16, 8, 3]], 16, 12);
-    if (o.bloom) blossoms(g, [[12, 10], [20, 10], [16, 7]]);
+    soilMound(g);
+    foliage(g, [[16, 12, 4.5], [11, 13, 3.2], [21, 13, 3.2], [13, 8, 2.8], [19, 8, 2.8], [16, 7, 3]], 16, 11);
+    if (o.bloom) blossoms(g, [[12, 9], [20, 9], [16, 6]]);
     if (o.fruit) { const ripe = o.fruit === "ripe"; for (const [tx, ty] of [[12, 25], [20, 25], [16, 27]]) disc(g, tx, ty, ripe ? 3 : 2, ripe ? ["rh", "rm", "rl"] : ["lm", "ll", "ld"], ripe); }
   },
   stalk(g, o) {
