@@ -56,8 +56,10 @@ export function registerDynamicAccent(iconKey: string, accent: Partial<Palette>)
   }
 }
 
-/** Per-plant accent colors, keyed by iconKey (sprite-layer data, not catalog). */
-const ACCENTS: Record<string, { f: string; F: string }> = {
+/** Per-plant accent colors, keyed by iconKey (sprite-layer data, not catalog).
+ *  Usually just the fruit/bloom accent (f/F), but any palette slot may be
+ *  overridden — e.g. red rhubarb stalks (s) or blue-green aloe pads (l/L). */
+const ACCENTS: Record<string, Partial<Palette>> = {
   tomato: { f: "#d23c2e", F: "#a02a20" },
   pepper_sweet: { f: "#e2542f", F: "#b03c1e" },
   cucumber: { f: "#3f8f4f", F: "#2f6f3e" },
@@ -208,9 +210,10 @@ const ACCENTS: Record<string, { f: string; F: string }> = {
   blueberry: { f: "#5566b0", F: "#3a4684" },
   strawberry: { f: "#e23b4b", F: "#b22a38" },
   potato: { f: "#c9a26a", F: "#9a774a" },
-  rhubarb: { f: "#c0392b", F: "#8e2b20" },
+  rhubarb: { f: "#c0392b", F: "#8e2b20", s: "#c0392b" }, // red leaf stalks
   asparagus: { f: "#6aa83f", F: "#4f8a2c" },
-  aloe_vera: { f: "#e8703a", F: "#bd5526" },
+  aloe_vera: { f: "#e8703a", F: "#bd5526", l: "#6fae84", L: "#4c8a64" }, // blue-green pads
+
   prickly_pear: { f: "#c0407a", F: "#922f5c" },
 };
 

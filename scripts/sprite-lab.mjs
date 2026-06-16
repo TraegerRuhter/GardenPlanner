@@ -402,16 +402,17 @@ console.log("wrote /tmp/realplants.png", rsheet.width + "x" + rsheet.height);
 
 // ---------------- new archetypes review sheet ----------------
 const NEW = [
-  { name: "tree", p: { ...BP, f: "#d6403a", F: "#a82c28" } },
-  { name: "cane", p: { ...BP, f: "#c0304f", F: "#8e2038" } },
-  { name: "shrub", p: { ...BP, f: "#5566b0", F: "#3a4684" } },
-  { name: "succulent", p: { ...BP, l: "#6fae84", L: "#4c8a64", f: "#e8703a", F: "#bd5526" } },
-  { name: "fern", p: { ...BP, l: "#4e9e54", L: "#3a7d44", f: "#3a7d44", F: "#2a5c33" } },
-  { name: "tuber", p: { ...BP, f: "#c9a26a", F: "#9a774a" } },
-  { name: "stalk", p: { ...BP, l: "#8fb05a", L: "#6c8a3e", s: "#9bc46a", f: "#8fb05a", F: "#6c8a3e" } },
-  { name: "cactus", p: { ...BP, l: "#5aa86a", L: "#3f7d4c", f: "#c0407a", F: "#922f5c" } },
-  { name: "sprouts", p: { ...BP, l: "#4f8a4a", L: "#3a6a36", f: "#4f8a4a", F: "#3a6a36" } },
-  { name: "mat", p: { ...BP, l: "#6a9a5a", L: "#4f7a40", f: "#9a7cc0", F: "#745aa0" } },
+  { name: "apple", shape: "tree", p: { ...BP, f: "#d6403a", F: "#a82c28" } },
+  { name: "pear", shape: "tree", p: { ...BP, f: "#c3d24a", F: "#9aa82e" } },
+  { name: "raspberry", shape: "cane", p: { ...BP, f: "#c0304f", F: "#8e2038" } },
+  { name: "blackberry", shape: "cane", p: { ...BP, f: "#3a2a4a", F: "#241a30" } },
+  { name: "blueberry", shape: "shrub", p: { ...BP, f: "#5566b0", F: "#3a4684" } },
+  { name: "strawberry", shape: "mat", p: { ...BP, l: "#6a9a5a", L: "#4f7a40", f: "#e23b4b", F: "#b22a38" } },
+  { name: "potato", shape: "tuber", p: { ...BP, f: "#c9a26a", F: "#9a774a" } },
+  { name: "rhubarb", shape: "stalk", p: { ...BP, l: "#8fb05a", L: "#6c8a3e", s: "#c0392b", f: "#c0392b", F: "#8e2b20" } },
+  { name: "asparagus", shape: "fern", p: { ...BP, l: "#4e9e54", L: "#3a7d44", f: "#6aa83f", F: "#4f8a2c" } },
+  { name: "aloe_vera", shape: "succulent", p: { ...BP, l: "#6fae84", L: "#4c8a64", f: "#e8703a", F: "#bd5526" } },
+  { name: "prickly_pear", shape: "cactus", p: { ...BP, l: "#5aa86a", L: "#3f7d4c", f: "#c0407a", F: "#922f5c" } },
 ];
 const NST = ["seedling", "vegetative", "flowering", "fruiting", "harvest"];
 const NS = 2, NSP = 64, NCW = 66, NCH = 78, NLEFT = 72, NTOP = 40, NPAD = 10;
@@ -426,7 +427,7 @@ NST.forEach((s, i) => nx.fillText(s, NLEFT + i * NCW + 2, NTOP - 4));
 NEW.forEach((a, r) => {
   nx.font = "bold 11px sans-serif"; nx.fillText(a.name, 4, NTOP + r * NCH + 36);
   const P = appPalette(a.p);
-  NST.forEach((stage, c) => nx.drawImage(renderGrid(makeGrid(a.name, stage), P, NS), NLEFT + c * NCW + 1, NTOP + r * NCH, NSP, NSP));
+  NST.forEach((stage, c) => nx.drawImage(renderGrid(makeGrid(a.shape, stage), P, NS), NLEFT + c * NCW + 1, NTOP + r * NCH, NSP, NSP));
 });
 writeFileSync("/tmp/new10.png", nsheet.toBuffer("image/png"));
 console.log("wrote /tmp/new10.png", nsheet.width + "x" + nsheet.height);
