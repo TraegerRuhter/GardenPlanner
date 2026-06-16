@@ -159,6 +159,26 @@ function fruits(g: Grid, list: number[][], r: number, ripe?: boolean) {
 }
 function blossoms(g: Grid, list: number[][]) { for (const [x, y] of list) { set(g, x, y, "bm"); set(g, x, y - 1, "bh"); set(g, x - 1, y, "bm"); set(g, x + 1, y, "bm"); set(g, x, y + 1, "bm"); } }
 function buds(g: Grid, list: number[][]) { for (const [x, y] of list) { set(g, x, y, "ld"); set(g, x, y - 1, "bm"); } }
+/** One tapered leaf radiating from (bx,by): dark edges separate it, light midrib. */
+function leafBlade(g: Grid, bx: number, by: number, ang: number, len: number, w0: number) {
+  const ax = Math.sin(ang), ay = -Math.cos(ang), px = Math.cos(ang), py = Math.sin(ang);
+  const steps = Math.max(6, Math.round(len));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps, cxp = bx + ax * len * t, cyp = by + ay * len * t;
+    const wi = Math.round(w0 * Math.sin(Math.min(1, t * 1.2) * Math.PI * 0.9));
+    for (let d = -wi; d <= wi; d++) {
+      const x = Math.round(cxp + px * d), y = Math.round(cyp + py * d);
+      let s = d <= -wi || d >= wi ? "ld" : d < 0 ? "lm" : "ll";
+      if (d === 0 && t > 0.06) s = t < 0.85 ? "lh" : "lm";
+      set(g, x, y, s);
+    }
+  }
+}
+/** Little curling tendril ("spindly bit") for vining plants. */
+function tendril(g: Grid, x: number, y: number, dir: number) {
+  set(g, x, y, "sm"); set(g, x + dir, y - 1, "sl"); set(g, x + dir * 2, y - 1, "sl");
+  set(g, x + dir * 2, y, "sm"); set(g, x + dir, y + 1, "sm");
+}
 function outline(g: Grid) {
   const f = (x: number, y: number) => x >= 0 && x < SZ && y >= 0 && y < SZ && g[y][x] && g[y][x] !== "ol";
   const add: [number, number][] = [];
@@ -205,16 +225,20 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
     for (const [dx, dy] of [[-4, 0], [4, 0], [0, -3], [-2, -2], [2, -2]]) set(g, 16 + dx, 6 + dy, "lh");
   },
   vine(g, o) {
-    for (let x = 8; x < 24; x++) set(g, x, 16, "sl");
-    foliage(g, [[11, 13, 3], [16, 11, 3.5], [21, 13, 3], [14, 15, 2.4], [19, 15, 2.4]], 16, 12);
-    if (o.bud) buds(g, [[12, 15], [20, 15]]);
-    if (o.bloom) blossoms(g, [[12, 15], [20, 15], [16, 14]]);
+    stem(g, 16, 28, 19); // grounded base
+    foliage(g, [[16, 15, 4], [11, 17, 3], [21, 17, 3], [13, 12, 2.8], [19, 12, 2.8], [16, 11, 3]], 16, 14);
+    // trailing runners along the soil, ending in curly tendrils (spindly bits)
+    for (const [vx, vy] of [[11, 20], [9, 22], [8, 24]]) { set(g, vx, vy, "sm"); set(g, vx, vy + 1, "sl"); }
+    for (const [vx, vy] of [[21, 20], [23, 22], [24, 24]]) { set(g, vx, vy, "sm"); set(g, vx, vy + 1, "sl"); }
+    foliage(g, [[9, 23, 1.9], [24, 23, 1.9]], 16, 23);
+    tendril(g, 7, 23, -1); tendril(g, 25, 23, 1); tendril(g, 22, 10, 1);
+    if (o.bud) buds(g, [[12, 12], [20, 12]]);
+    if (o.bloom) blossoms(g, [[12, 12], [20, 12], [16, 10]]);
     if (o.fruit) {
-      const ripe = o.fruit === "ripe", n = ripe ? 11 : 8;
+      const ripe = o.fruit === "ripe", n = ripe ? 9 : 6;
       const hi = ripe ? "fh" : "lm", mi = ripe ? "fm" : "ll", lo = ripe ? "fl" : "ld";
-      for (const [vx, vy] of [[15, 17], [14, 19], [13, 21], [12, 23]]) set(g, vx, vy, "sl"); // vine drops to the fruit
-      for (let i = 0; i < n; i++) { const x = 12 + i, y = 25 - Math.round(i * 0.3); set(g, x, y, mi); set(g, x, y - 1, i > 0 && i < n - 1 ? hi : mi); set(g, x, y + 1, lo); }
-      for (let i = 2; i < n - 2; i += 3) set(g, 12 + i, 24 - Math.round(i * 0.3), lo);
+      for (const [vx, vy] of [[15, 21], [14, 23], [13, 25]]) set(g, vx, vy, "sl"); // vine to the fruit
+      for (let i = 0; i < n; i++) { const x = 12 + i, y = 27; set(g, x, y - 1, i > 0 && i < n - 1 ? hi : mi); set(g, x, y, mi); set(g, x, y + 1, lo); } // cucumber resting on the ground
     }
   },
   tall(g, o) {
@@ -228,8 +252,9 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
     }
   },
   leafy(g) {
-    foliage(g, [[16, 18, 7], [9, 17, 4.5], [23, 17, 4.5], [12, 14, 4.5], [20, 14, 4.5], [16, 13, 5]], 16, 16);
-    for (const [dx, dy] of [[-5, -2], [5, -2], [-6, 1], [6, 1], [0, -4]]) for (let i = 0; i < 5; i++) set(g, 16 + Math.round(dx * i / 5), 16 + Math.round(dy * i / 5), "ld");
+    stem(g, 16, 28, 26);
+    const leaves = [[-1.15, 11, 2.2], [1.15, 11, 2.2], [-0.7, 14, 2.5], [0.7, 14, 2.5], [-0.3, 15, 2.6], [0.3, 15, 2.6], [0, 16, 2.6]];
+    for (const [ang, len, w] of leaves) leafBlade(g, 16, 26, ang, len, w);
   },
   herb(g, o) {
     stem(g, 16, 28, 18);
