@@ -159,20 +159,37 @@ function mapFamily(family: string | null): string {
 
 function inferShape(type: string, category: PlantCategory, detail: PerenualPlantDetail): SpriteShape {
   const t = type.toLowerCase();
+  const name = detail.common_name.toLowerCase();
+  // Strong species hints first (more specific than the type/category fallback).
+  if (/raspberr|blackberr|boysenberr|loganberr|bramble|dewberr/.test(name)) return "cane";
+  if (/blueberr|currant|gooseberr|honeyberr|cranberr|elderberr|aronia/.test(name)) return "shrub";
+  if (/prickly pear|cactus|nopal|opuntia/.test(name)) return "cactus";
+  if (/aloe|agave|succulent|sedum|jade plant|echeveria|haworthia/.test(name)) return "succulent";
+  if (/asparagus|\bfern\b|\bdill\b/.test(name)) return "fern";
+  if (/brussels/.test(name)) return "sprouts";
+  if (/celery|rhubarb|chard|cardoon/.test(name)) return "stalk";
+  if (/sweet potato|\byam\b|ginger|turmeric|cassava|taro/.test(name)) return "tuber";
+  if (/potato/.test(name)) return "tuber";
+  if (/strawberr|creeping|thyme/.test(name)) return "mat";
+  if (/\bcorn\b|maize/.test(name)) return "cob";
+  if (/sunflower/.test(name)) return "tall";
+  if (/carrot|radish|beet|turnip|parsnip|daikon/.test(name)) return "root";
+  if (/onion|garlic|shallot|leek|chive/.test(name)) return "bulb";
+  if (/cucumber|gherkin/.test(name)) return "vine";
+  if (/squash|melon|pumpkin|zucchini|gourd/.test(name)) return "gourd";
+  if (/cauliflower|cabbage/.test(name)) return "head";
+  if (/broccoli|romanesco/.test(name)) return "crown";
+  if (/lettuce|spinach|kale|collard/.test(name)) return "leafy";
+  if ((name.includes("pea") || name.includes("bean")) && /pole|runner|climb/.test(name)) return "climbing";
+  // Type / category fallbacks.
   if (t.includes("grass") || t.includes("grain")) return "grass";
   if (t.includes("climber") || t.includes("vine") || t.includes("climbing")) return "climbing";
   if (t.includes("bulb")) return "bulb";
+  if (t.includes("tree") || category === "tree") return "tree";
+  if (t.includes("shrub") || t.includes("bush") || category === "shrub") return "shrub";
   if (category === "herb") return "herb";
   if (category === "flower") return "flower";
-  if (category === "tree" || category === "shrub") return "tall";
   if (detail.edible_leaf && !detail.edible_fruit) return "leafy";
-  const name = detail.common_name.toLowerCase();
-  if (name.includes("carrot") || name.includes("radish") || name.includes("beet") || name.includes("turnip") || name.includes("parsnip")) return "root";
-  if (name.includes("onion") || name.includes("garlic") || name.includes("shallot")) return "bulb";
-  if (name.includes("cucumber") || name.includes("squash") || name.includes("melon") || name.includes("pumpkin") || name.includes("zucchini")) return "vine";
-  if (name.includes("pea") || name.includes("bean") && name.includes("pole")) return "climbing";
-  if (name.includes("corn") || name.includes("sunflower")) return "tall";
-  if (name.includes("lettuce") || name.includes("spinach") || name.includes("chard") || name.includes("kale")) return "leafy";
   return "bush";
 }
 
