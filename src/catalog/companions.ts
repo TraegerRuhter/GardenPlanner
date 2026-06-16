@@ -235,4 +235,11 @@ export const companions: CompanionRelationship[] = [
     reason: "alliums suppress fungal disease and deter beetles",
     strength: "weak",
   },
+  {
+    aPlantId: "grape",
+    bPlantId: "chives",
+    type: "beneficial",
+    reason: "chives deter aphids and Japanese beetles around the vine",
+    strength: "weak",
+  },
 ];
