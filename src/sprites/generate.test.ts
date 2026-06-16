@@ -22,8 +22,8 @@ const PAIRS: [SpriteShape, StageKey][] = [];
 for (const sh of SHAPES) for (const st of STAGES) PAIRS.push([sh, st]);
 
 describe("procedural sprite generator", () => {
-  it("covers all 15 shape archetypes", () => {
-    expect(SHAPES).toHaveLength(15);
+  it("covers all 25 shape archetypes", () => {
+    expect(SHAPES).toHaveLength(25);
   });
 
   it.each(PAIRS)("%s/%s is a 32×32 grid of known slots and non-empty", (shape, stage) => {

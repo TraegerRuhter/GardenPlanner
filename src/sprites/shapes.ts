@@ -19,7 +19,17 @@ export type SpriteShape =
   | "head"
   | "gourd"
   | "crown"
-  | "berry";
+  | "berry"
+  | "tree"
+  | "cane"
+  | "shrub"
+  | "succulent"
+  | "fern"
+  | "tuber"
+  | "stalk"
+  | "cactus"
+  | "sprouts"
+  | "mat";
 
 export const SHAPE_LABELS: Record<SpriteShape, string> = {
   bush: "Bush",
@@ -37,4 +47,14 @@ export const SHAPE_LABELS: Record<SpriteShape, string> = {
   gourd: "Gourd / Ground fruit",
   crown: "Crown / Floret",
   berry: "Berry bush",
+  tree: "Tree",
+  cane: "Cane / Bramble",
+  shrub: "Shrub",
+  succulent: "Succulent",
+  fern: "Fern / Frond",
+  tuber: "Tuber",
+  stalk: "Stalk / Rib",
+  cactus: "Cactus / Pad",
+  sprouts: "Sprout stalk",
+  mat: "Mat / Groundcover",
 };
