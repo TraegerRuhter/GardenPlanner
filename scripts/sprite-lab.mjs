@@ -644,3 +644,49 @@ APP25.forEach(([label, draw, cat, accent], i) => {
 });
 writeFileSync("/tmp/produce-app.png", asheet2.toBuffer("image/png"));
 console.log("wrote /tmp/produce-app.png", asheet2.width + "x" + asheet2.height);
+
+// --------- LEAF/STALK: accent-driven foliage (mirrors paletteFor promotion) --------
+const LEAF_SET = new Set(["leafy", "head", "crown", "sprouts", "fern"]);
+function appResolve(shape, cat, accent) {
+  const p = { ...CAT[cat], ...accent };
+  if (accent.f !== undefined) {
+    if (LEAF_SET.has(shape)) { if (accent.l === undefined) p.l = accent.f; if (accent.L === undefined) p.L = accent.F ?? p.L; }
+    else if (shape === "stalk" && accent.s === undefined) p.s = accent.f;
+  }
+  return p;
+}
+const DRAW_BY_SHAPE = { leafy: "leafy", head: "cabbage", crown: "broccoli", sprouts: "sprout", fern: "spear", stalk: "stalkbunch" };
+const LEAFCROPS = [
+  ["kale", "leafy", "vegetable", { f: "#3a7d5c", F: "#2a5c44" }],
+  ["lettuce", "leafy", "vegetable", { f: "#8fcf6f", F: "#6aa84f" }],
+  ["spinach", "leafy", "vegetable", { f: "#3a7d44", F: "#2a5c33" }],
+  ["red amaranth", "leafy", "vegetable", { f: "#c0305a", F: "#981f44" }],
+  ["bok choy", "leafy", "vegetable", { f: "#bcd07a", F: "#97ab58" }],
+  ["cabbage", "head", "vegetable", { f: "#a8d08a", F: "#84ab66" }],
+  ["radicchio", "head", "vegetable", { f: "#a83048", F: "#821f34" }],
+  ["napa cabbage", "head", "vegetable", { f: "#cdd89a", F: "#a8b478" }],
+  ["broccoli", "crown", "vegetable", { f: "#3f8f4f", F: "#2f6f3e" }],
+  ["cauliflower", "crown", "vegetable", { f: "#eee8d0", F: "#ccc6ae" }],
+  ["romanesco", "crown", "vegetable", { f: "#b0d050", F: "#88b038" }],
+  ["purple sprouting", "crown", "vegetable", { f: "#7a5a8a", F: "#5c4068" }],
+  ["brussels", "sprouts", "vegetable", { f: "#4f8a4a", F: "#3a6a36" }],
+  ["asparagus", "fern", "vegetable", { f: "#6aa83f", F: "#4f8a2c" }],
+  ["celery", "stalk", "vegetable", { f: "#9bc46a", F: "#79a04a" }],
+  ["rhubarb", "stalk", "fruit", { f: "#c0392b", F: "#8e2b20", s: "#c0392b" }],
+];
+const lrows = Math.ceil(LEAFCROPS.length / PCOLS);
+const lsheet = createCanvas(PCOLS * PCW + PPAD * 2, lrows * PCH + PTOP + PPAD);
+const lx = lsheet.getContext("2d");
+lx.fillStyle = "#cdbfa6"; lx.fillRect(0, 0, lsheet.width, lsheet.height);
+lx.imageSmoothingEnabled = false;
+lx.fillStyle = "#2a1d13"; lx.font = "bold 18px sans-serif";
+lx.fillText("LEAF/STALK — accent now drives the foliage (distinct per crop)", PPAD, 24);
+LEAFCROPS.forEach(([label, shape, cat, accent], i) => {
+  const c = i % PCOLS, r = (i / PCOLS) | 0, x = PPAD + c * PCW, y = PTOP + r * PCH;
+  const g = newGrid(); PROD_ITEM[DRAW_BY_SHAPE[shape]](g); outline(g);
+  lx.drawImage(renderGrid(g, appPalette(appResolve(shape, cat, accent)), PSC), x + (PCW - PSP) / 2, y, PSP, PSP);
+  lx.fillStyle = "#2a1d13"; lx.font = "12px sans-serif";
+  lx.fillText(label, x + (PCW - PSP) / 2 + 2, y + PSP + 12);
+});
+writeFileSync("/tmp/produce-leaf.png", lsheet.toBuffer("image/png"));
+console.log("wrote /tmp/produce-leaf.png", lsheet.width + "x" + lsheet.height);

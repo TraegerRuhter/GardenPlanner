@@ -419,11 +419,34 @@ export function resolvedPalette(iconKey: string, category: PlantCategory): Palet
 
 const cache = new Map<string, string>();
 
+/** Shapes whose silhouette IS the foliage: the harvested part is the plant
+ *  body, so the per-plant accent — picked to match the crop's real color (red
+ *  radicchio, white cauliflower, purple sprouting broccoli) — should drive the
+ *  leaf slot, not an otherwise-unused fruit slot. Stalk crops promote to the
+ *  stem slot (pale celery, grey-green cardoon) instead. This keeps each plant
+ *  sprite and its produce icon in the same hue. */
+const LEAF_SHAPES = new Set<SpriteShape>(["leafy", "head", "crown", "sprouts", "fern"]);
+
 function paletteFor(iconKey: string, category: PlantCategory): Palette {
   const base = CATEGORY_PALETTES[category];
   const accent = ACCENTS[iconKey];
   const dynamic = DYNAMIC_ACCENTS.get(iconKey);
-  return { ...base, ...accent, ...dynamic };
+  const resolved: Palette = { ...base, ...accent, ...dynamic };
+  // Only promote when an explicit accent color exists, so plants relying on the
+  // category default stay their default green rather than borrowing a red fruit.
+  const accentColor = dynamic?.f ?? accent?.f;
+  const accentDeep = dynamic?.F ?? accent?.F;
+  if (accentColor !== undefined) {
+    const has = (k: keyof Palette) => accent?.[k] !== undefined || dynamic?.[k] !== undefined;
+    const shape = getPlantShape(iconKey);
+    if (LEAF_SHAPES.has(shape)) {
+      if (!has("l")) resolved.l = accentColor;
+      if (!has("L")) resolved.L = accentDeep ?? resolved.L;
+    } else if (shape === "stalk" && !has("s")) {
+      resolved.s = accentColor;
+    }
+  }
+  return resolved;
 }
 
 /** Paint a slot grid to a crisp data URL.
