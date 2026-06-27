@@ -27,7 +27,6 @@ function makeInstance(over: Partial<PlantInstance> = {}): PlantInstance {
   return {
     id: "i1",
     gardenId: "g",
-    areaId: "a",
     plantId: radish.id,
     tiles: [{ col: 0, row: 0 }],
     plantingMethod: method,

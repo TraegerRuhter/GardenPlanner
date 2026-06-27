@@ -5,7 +5,7 @@ import { useAppStore } from "../store/appStore";
 import type { SeedPacket, Settings } from "../types/models";
 import { viabilityScore } from "../engines/inventory";
 import { newId } from "../lib/ids";
-import { Badge, badgeTone } from "../components";
+import { Badge, badgeTone, ProduceImg } from "../components";
 
 export function SettingsPage() {
   const settings = useAppStore((s) => s.settings);
@@ -274,6 +274,7 @@ function SeedStash() {
             const scoreLbl = { fresh: "Fresh", good: "Good", aging: "Aging", expired: "Expired" }[score] ?? score;
             return (
               <li key={p.id} className="flex items-center gap-2 rounded-lg border border-[var(--color-paper-deep)] bg-white/50 p-2.5 dark:bg-white/5">
+                {plant && <ProduceImg plant={plant} size={30} className="shrink-0" />}
                 <span className="flex-1">
                   <span className="font-medium">{plant?.commonName ?? p.plantId}</span>
                   {p.packedForYear ? <span className="text-[var(--color-ink-soft)]"> · packed {p.packedForYear}</span> : ""}

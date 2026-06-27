@@ -1,27 +1,32 @@
 /**
- * §12.2/§12.3 — the Konva plot: pannable, zoomable stage rendering every
- * area at its origin with layered terrain → elevation shade → content →
- * sun overlay → selection. Tap a tile to apply the active tool; drag an
- * area's title bar to reposition it on the canvas (satellites, §12.2).
+ * §12.2/§12.3 — the Konva plot, redesigned as one continuous grass FIELD you
+ * carve into. The ground plane (grass + carved soil/path/… + flora) is painted
+ * once to an offscreen canvas and blitted as a single image; plants, the sun
+ * overlay, harvest badges, the edit grid, and selection layer on top. Straight-
+ * on view; cardinal orientation is a data property (drives the sun, not the
+ * camera). Pan by dragging, zoom with the wheel / buttons.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Group, Image as KImage, Layer, Rect, Stage, Text } from "react-konva";
+import { Circle, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
 import type Konva from "konva";
-import type { Garden, GardenArea, Plant, PlantInstance, Tile } from "../../types/models";
+import type { FieldOverlay, Garden, OverlaySub, Plant, PlantInstance } from "../../types/models";
 import type { SunMap } from "../../engines/sunModel";
 import { tileKey } from "../../engines/sunModel";
-import { spriteFor } from "../../sprites/sprites";
-import { GRID_LINE, HARDSCAPES, SOIL_BASE, STRUCTURES, TILE_PX, WATER } from "./palette";
+import { groundTypeAt } from "../../db/gardenRepo";
+import { produceFor, spriteFor } from "../../sprites/sprites";
+import { GROUND_NATIVE, paintField } from "../../sprites/ground";
+import { GRID_LINE, OVERLAYS, TILE_PX } from "./palette";
 
 export interface CanvasProps {
   garden: Garden;
   instances: PlantInstance[];
   plantsById: Map<string, Plant>;
-  sunMaps: Map<string, SunMap> | null; // areaId → map, when overlay on
-  selected: { areaId: string; col: number; row: number } | null;
-  onTileTap: (areaId: string, col: number, row: number) => void;
-  onAreaMove: (areaId: string, x: number, y: number) => void;
+  sunMap: SunMap | null;
+  selected: { col: number; row: number } | null;
+  pendingOverlay: { col: number; row: number; sub: OverlaySub } | null;
+  fieldMode: boolean;
+  onCellTap: (col: number, row: number) => void;
   height: number;
 }
 
@@ -32,16 +37,20 @@ export function GardenCanvas({
   garden,
   instances,
   plantsById,
-  sunMaps,
+  sunMap,
   selected,
-  onTileTap,
-  onAreaMove,
+  pendingOverlay,
+  fieldMode,
+  onCellTap,
   height,
 }: CanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(800);
   const [scale, setScale] = useState(1);
+  const { field } = garden;
+  const fieldW = field.cols * TILE_PX;
+  const fieldH = field.rows * TILE_PX;
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -52,10 +61,36 @@ export function GardenCanvas({
     return () => ro.disconnect();
   }, []);
 
-  const instancesById = useMemo(
-    () => new Map(instances.map((i) => [i.id, i])),
-    [instances],
-  );
+  // Paint the whole ground plane once; repaint only when the carve / size /
+  // mode changes. Flora shows in view mode, hides in the stark field mode.
+  const groundSig = useMemo(() => JSON.stringify(field.ground), [field.ground]);
+  const groundCanvas = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = field.cols * GROUND_NATIVE;
+    c.height = field.rows * GROUND_NATIVE;
+    const ctx = c.getContext("2d")!;
+    paintField(
+      ctx,
+      { cols: field.cols, rows: field.rows, groundType: (col, row) => groundTypeAt(field, col, row) },
+      { flora: !fieldMode },
+    );
+    return c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [field.cols, field.rows, groundSig, fieldMode]);
+
+  function cellFromPointer(): { col: number; row: number } | null {
+    const stage = stageRef.current;
+    if (!stage) return null;
+    const pt = stage.getPointerPosition();
+    if (!pt) return null;
+    const tr = stage.getAbsoluteTransform().copy();
+    tr.invert();
+    const p = tr.point(pt);
+    const col = Math.floor(p.x / TILE_PX);
+    const row = Math.floor(p.y / TILE_PX);
+    if (col < 0 || row < 0 || col >= field.cols || row >= field.rows) return null;
+    return { col, row };
+  }
 
   function zoomStep(dir: 1 | -1, center?: { x: number; y: number }) {
     const stage = stageRef.current;
@@ -74,8 +109,66 @@ export function GardenCanvas({
     setScale(next);
   }
 
+  // grid lines (edit aid, field mode only)
+  const gridLines: React.ReactNode[] = [];
+  if (fieldMode) {
+    for (let c = 0; c <= field.cols; c++)
+      gridLines.push(<Line key={`v${c}`} points={[c * TILE_PX, 0, c * TILE_PX, fieldH]} stroke={GRID_LINE} strokeWidth={1} listening={false} />);
+    for (let r = 0; r <= field.rows; r++)
+      gridLines.push(<Line key={`h${r}`} points={[0, r * TILE_PX, fieldW, r * TILE_PX]} stroke={GRID_LINE} strokeWidth={1} listening={false} />);
+  }
+
+  // sun overlay (per cell) when a map is present
+  const sunRects: React.ReactNode[] = [];
+  if (sunMap) {
+    for (let col = 0; col < field.cols; col++)
+      for (let row = 0; row < field.rows; row++) {
+        const hrs = sunMap.get(tileKey(col, row)) ?? 9;
+        const opacity = Math.max(0, Math.min(0.7, (9 - hrs) / 12));
+        if (opacity < 0.02) continue;
+        sunRects.push(<Rect key={`s${col},${row}`} x={col * TILE_PX} y={row * TILE_PX} width={TILE_PX} height={TILE_PX} fill="#1e2a4a" opacity={opacity} listening={false} />);
+      }
+  }
+
+  // plants + harvest badges (one sprite per occupied cell)
+  const plantNodes: React.ReactNode[] = [];
+  for (const inst of instances) {
+    const plant = plantsById.get(inst.plantId);
+    if (!plant) continue;
+    const stage = inst.status === "planned" ? "planted" : inst.currentStage;
+    const url = spriteFor(plant.iconKey, plant.category, stage, 2);
+    const ghost = inst.status === "planned";
+    const ripe = inst.status === "active" && inst.currentStage === "harvest";
+    const badge = ripe ? produceFor(plant.iconKey, plant.category, 2) : null;
+    for (const t of inst.tiles) {
+      plantNodes.push(
+        <ImageNode key={`p${inst.id},${t.col},${t.row}`} url={url} x={t.col * TILE_PX} y={t.row * TILE_PX} size={TILE_PX} opacity={ghost ? 0.55 : 1} />,
+      );
+      if (badge) plantNodes.push(<ProduceBadge key={`b${inst.id},${t.col},${t.row}`} url={badge} x={t.col * TILE_PX} y={t.row * TILE_PX} />);
+    }
+  }
+
+  // overlays (sub-cell infrastructure): lines through cell centers, strips between
+  const cellCm = field.cellSizeCm;
+  const overlayNodes: React.ReactNode[] = [];
+  for (const o of field.overlays) {
+    const meta = OVERLAYS[o.sub];
+    const color = meta?.color ?? "#4f8fc4";
+    const pts = o.path.flatMap((p) => [p.x * TILE_PX, p.y * TILE_PX]);
+    if (o.kind === "strip") {
+      const wPx = ((o.widthCm ?? meta?.widthCm ?? 45) / cellCm) * TILE_PX;
+      overlayNodes.push(<Line key={`o${o.id}`} points={pts} stroke={color} strokeWidth={wPx} lineCap="round" lineJoin="round" opacity={0.92} listening={false} />);
+    } else {
+      overlayNodes.push(<Line key={`o${o.id}`} points={pts} stroke={color} strokeWidth={2.5} dash={o.sub === "soaker" ? [5, 4] : undefined} lineCap="round" listening={false} />);
+      if (o.sub === "drip") for (const e of emittersAlong(o)) overlayNodes.push(<Circle key={`e${o.id},${e.x.toFixed(1)},${e.y.toFixed(1)}`} x={e.x * TILE_PX} y={e.y * TILE_PX} radius={2.2} fill="#bfe0f5" listening={false} />);
+    }
+  }
+  const pendingMarker = pendingOverlay ? (
+    <Circle x={(pendingOverlay.col + 0.5) * TILE_PX} y={(pendingOverlay.row + 0.5) * TILE_PX} radius={TILE_PX * 0.32} stroke={OVERLAYS[pendingOverlay.sub]?.color ?? "#4f8fc4"} strokeWidth={2} dash={[4, 3]} listening={false} />
+  ) : null;
+
   return (
-    <div ref={wrapRef} className="relative overflow-hidden rounded-xl border border-[var(--color-paper-deep)] bg-[#a8c686]/40">
+    <div ref={wrapRef} className="relative overflow-hidden rounded-xl border border-[var(--color-paper-deep)] bg-[#5f9f46]">
       <Stage
         ref={stageRef}
         width={width}
@@ -85,21 +178,22 @@ export function GardenCanvas({
           e.evt.preventDefault();
           zoomStep(e.evt.deltaY > 0 ? -1 : 1, e.target.getStage()!.getPointerPosition() ?? undefined);
         }}
+        onClick={() => { const c = cellFromPointer(); if (c) onCellTap(c.col, c.row); }}
+        onTap={() => { const c = cellFromPointer(); if (c) onCellTap(c.col, c.row); }}
         className="touch-none"
       >
         <Layer imageSmoothingEnabled={false}>
-          {garden.areas.map((area) => (
-            <AreaGroup
-              key={area.id}
-              area={area}
-              instancesById={instancesById}
-              plantsById={plantsById}
-              sunMap={sunMaps?.get(area.id) ?? null}
-              selected={selected?.areaId === area.id ? selected : null}
-              onTileTap={onTileTap}
-              onAreaMove={onAreaMove}
-            />
-          ))}
+          {/* a thin soil border frames the plot edge */}
+          <Rect x={-2} y={-2} width={fieldW + 4} height={fieldH + 4} fill="#4a3a28" cornerRadius={4} listening={false} />
+          <KImage image={groundCanvas} x={0} y={0} width={fieldW} height={fieldH} />
+          {sunRects}
+          {gridLines}
+          {overlayNodes}
+          {plantNodes}
+          {selected && (
+            <Rect x={selected.col * TILE_PX} y={selected.row * TILE_PX} width={TILE_PX} height={TILE_PX} stroke="#f3c14b" strokeWidth={2.5} listening={false} />
+          )}
+          {pendingMarker}
         </Layer>
       </Stage>
 
@@ -107,7 +201,7 @@ export function GardenCanvas({
       <div className="absolute right-2 top-2 flex flex-col items-center gap-1">
         <div
           aria-label={`North is ${garden.northBearingDeg}° from screen-up`}
-          title="Compass — N"
+          title="Compass — N (drives the sun estimate)"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-sm font-bold text-[#b3412e] shadow"
           style={{ transform: `rotate(${-garden.northBearingDeg}deg)` }}
         >
@@ -121,172 +215,48 @@ export function GardenCanvas({
   );
 }
 
-function AreaGroup({
-  area,
-  instancesById,
-  plantsById,
-  sunMap,
-  selected,
-  onTileTap,
-  onAreaMove,
-}: {
-  area: GardenArea;
-  instancesById: Map<string, PlantInstance>;
-  plantsById: Map<string, Plant>;
-  sunMap: SunMap | null;
-  selected: { col: number; row: number } | null;
-  onTileTap: (areaId: string, col: number, row: number) => void;
-  onAreaMove: (areaId: string, x: number, y: number) => void;
-}) {
-  const tiles = useMemo(() => {
-    const m = new Map<string, Tile>();
-    for (const t of area.tiles) m.set(`${t.col},${t.row}`, t);
-    return m;
-  }, [area.tiles]);
-
-  const w = area.grid.cols * TILE_PX;
-  const h = area.grid.rows * TILE_PX;
-
-  const cells: React.ReactNode[] = [];
-  for (let col = 0; col < area.grid.cols; col++) {
-    for (let row = 0; row < area.grid.rows; row++) {
-      const tile = tiles.get(`${col},${row}`);
-      cells.push(
-        <TileCell
-          key={`${col},${row}`}
-          col={col}
-          row={row}
-          tile={tile}
-          instancesById={instancesById}
-          plantsById={plantsById}
-          sunHours={sunMap?.get(tileKey(col, row))}
-          isSelected={selected?.col === col && selected?.row === row}
-          onTap={() => onTileTap(area.id, col, row)}
-        />,
-      );
+/** Cell-center points along an overlay's segments (drip emitter spots). */
+function emittersAlong(o: FieldOverlay): Array<{ x: number; y: number }> {
+  const out: Array<{ x: number; y: number }> = [];
+  for (let i = 0; i + 1 < o.path.length; i++) {
+    const a = o.path[i], b = o.path[i + 1];
+    const steps = Math.max(1, Math.round(Math.hypot(b.x - a.x, b.y - a.y)));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
     }
   }
-
-  return (
-    <Group x={area.origin.x} y={area.origin.y} rotation={area.rotationDeg}>
-      {/* drag handle / title bar */}
-      <Group
-        draggable
-        onDragEnd={(e) => {
-          onAreaMove(area.id, area.origin.x + e.target.x(), area.origin.y + e.target.y());
-          e.target.position({ x: 0, y: 0 });
-        }}
-      >
-        <Rect x={0} y={-22} width={w} height={20} fill="rgba(47,111,62,0.85)" cornerRadius={4} />
-        <Text x={6} y={-18} text={`⠿ ${area.name}`} fontSize={12} fill="#fff" listening={false} />
-      </Group>
-      {/* bed backdrop */}
-      <Rect x={-3} y={-3} width={w + 6} height={h + 6} fill="#6e5238" cornerRadius={6} />
-      {cells}
-    </Group>
-  );
-}
-
-function TileCell({
-  col,
-  row,
-  tile,
-  instancesById,
-  plantsById,
-  sunHours,
-  isSelected,
-  onTap,
-}: {
-  col: number;
-  row: number;
-  tile: Tile | undefined;
-  instancesById: Map<string, PlantInstance>;
-  plantsById: Map<string, Plant>;
-  sunHours: number | undefined;
-  isSelected: boolean;
-  onTap: () => void;
-}) {
-  const x = col * TILE_PX;
-  const y = row * TILE_PX;
-  const content = tile?.content ?? { type: "empty" as const };
-  const elev = tile?.elevationCm ?? 0;
-
-  let base = SOIL_BASE;
-  let glyph: { text: string; color: string } | null = null;
-  let sprite: string | null = null;
-  let ghost = false;
-
-  if (content.type === "hardscape") {
-    base = HARDSCAPES[content.hardscape].color;
-  } else if (content.type === "water") {
-    base = "#7d5c46";
-    glyph = { text: WATER[content.water].glyph, color: WATER[content.water].color };
-  } else if (content.type === "structure") {
-    glyph = { text: STRUCTURES[content.structure].glyph, color: STRUCTURES[content.structure].color };
-  } else if (content.type === "plant") {
-    const inst = instancesById.get(content.instanceId);
-    const plant = inst && plantsById.get(inst.plantId);
-    if (inst && plant) {
-      // scale 2 → 32px native = TILE_PX, so the sprite blits 1:1 at zoom 1.
-      sprite = spriteFor(plant.iconKey, plant.category, inst.status === "planned" ? "planted" : inst.currentStage, 2);
-      ghost = inst.status === "planned";
-    }
-  }
-
-  // §12.5 elevation shading: lighter when raised, darker when sunken
-  const elevShade =
-    elev > 0
-      ? { fill: "#ffffff", opacity: Math.min(0.35, elev / 90) }
-      : elev < 0
-        ? { fill: "#000000", opacity: Math.min(0.35, -elev / 90) }
-        : null;
-
-  // §12.8 sun overlay: deep shade = dark slate wash
-  const sunWash =
-    sunHours !== undefined
-      ? { opacity: Math.max(0, Math.min(0.7, (9 - sunHours) / 12)) }
-      : null;
-
-  return (
-    <Group x={x} y={y} onClick={onTap} onTap={onTap}>
-      <Rect width={TILE_PX} height={TILE_PX} fill={base} stroke={GRID_LINE} strokeWidth={1} />
-      {elevShade && <Rect width={TILE_PX} height={TILE_PX} fill={elevShade.fill} opacity={elevShade.opacity} listening={false} />}
-      {sprite && <SpriteNode url={sprite} ghost={ghost} />}
-      {glyph && (
-        <Text
-          text={glyph.text}
-          fontSize={22}
-          fill={glyph.color}
-          width={TILE_PX}
-          height={TILE_PX}
-          align="center"
-          verticalAlign="middle"
-          listening={false}
-        />
-      )}
-      {sunWash && <Rect width={TILE_PX} height={TILE_PX} fill="#1e2a4a" opacity={sunWash.opacity} listening={false} />}
-      {isSelected && <Rect width={TILE_PX} height={TILE_PX} stroke="#f3c14b" strokeWidth={2.5} listening={false} />}
-      {elev !== 0 && (
-        <Text text={`${elev > 0 ? "+" : ""}${elev}`} fontSize={8} fill="rgba(255,255,255,0.85)" x={2} y={2} listening={false} />
-      )}
-    </Group>
-  );
+  return out;
 }
 
 const imageCache = new Map<string, HTMLImageElement>();
-
-function SpriteNode({ url, ghost }: { url: string; ghost: boolean }) {
+function useDecoded(url: string): HTMLImageElement | null {
   const [, bump] = useState(0);
   const img = imageCache.get(url) ?? null;
   useEffect(() => {
     if (imageCache.has(url)) return;
     const el = new window.Image();
-    el.onload = () => {
-      imageCache.set(url, el);
-      bump((n) => n + 1); // async: re-render once decoded
-    };
+    el.onload = () => { imageCache.set(url, el); bump((n) => n + 1); };
     el.src = url;
   }, [url]);
+  return img;
+}
+
+function ImageNode({ url, x, y, size, opacity }: { url: string; x: number; y: number; size: number; opacity: number }) {
+  const img = useDecoded(url);
   if (!img) return null;
-  return <KImage image={img} width={TILE_PX} height={TILE_PX} opacity={ghost ? 0.55 : 1} listening={false} />;
+  return <KImage image={img} x={x} y={y} width={size} height={size} opacity={opacity} listening={false} />;
+}
+
+/** Small corner badge marking a harvest-ready cell with its produce icon. */
+function ProduceBadge({ url, x, y }: { url: string; x: number; y: number }) {
+  const img = useDecoded(url);
+  if (!img) return null;
+  const S = 15;
+  return (
+    <Group x={x + TILE_PX - S - 1} y={y + 1} listening={false}>
+      <Rect width={S} height={S} cornerRadius={S / 2} fill="rgba(255,255,255,0.85)" stroke="#3a2a18" strokeWidth={1} />
+      <KImage image={img} x={1} y={1} width={S - 2} height={S - 2} />
+    </Group>
+  );
 }

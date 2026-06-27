@@ -9,7 +9,7 @@
 
 import type { PlantCategory, StageKey } from "../types/models";
 import type { SpriteShape } from "./shapes";
-import { buildSlotPalette, generateGrid, GRID_SIZE } from "./generate";
+import { buildSlotPalette, generateGrid, generateProduce, GRID_SIZE } from "./generate";
 
 interface Palette {
   m: string;
@@ -419,11 +419,58 @@ export function resolvedPalette(iconKey: string, category: PlantCategory): Palet
 
 const cache = new Map<string, string>();
 
+/** Shapes whose silhouette IS the foliage: the harvested part is the plant
+ *  body, so the per-plant accent — picked to match the crop's real color (red
+ *  radicchio, white cauliflower, purple sprouting broccoli) — should drive the
+ *  leaf slot, not an otherwise-unused fruit slot. Stalk crops promote to the
+ *  stem slot (pale celery, grey-green cardoon) instead. This keeps each plant
+ *  sprite and its produce icon in the same hue. */
+const LEAF_SHAPES = new Set<SpriteShape>(["leafy", "head", "crown", "sprouts", "fern"]);
+
 function paletteFor(iconKey: string, category: PlantCategory): Palette {
   const base = CATEGORY_PALETTES[category];
   const accent = ACCENTS[iconKey];
   const dynamic = DYNAMIC_ACCENTS.get(iconKey);
-  return { ...base, ...accent, ...dynamic };
+  const resolved: Palette = { ...base, ...accent, ...dynamic };
+  // Only promote when an explicit accent color exists, so plants relying on the
+  // category default stay their default green rather than borrowing a red fruit.
+  const accentColor = dynamic?.f ?? accent?.f;
+  const accentDeep = dynamic?.F ?? accent?.F;
+  if (accentColor !== undefined) {
+    const has = (k: keyof Palette) => accent?.[k] !== undefined || dynamic?.[k] !== undefined;
+    const shape = getPlantShape(iconKey);
+    if (LEAF_SHAPES.has(shape)) {
+      if (!has("l")) resolved.l = accentColor;
+      if (!has("L")) resolved.L = accentDeep ?? resolved.L;
+    } else if (shape === "stalk" && !has("s")) {
+      resolved.s = accentColor;
+    }
+  }
+  return resolved;
+}
+
+/** Paint a slot grid to a crisp data URL.
+ *  32px art. scale 2 → 1× (32px = TILE_PX, blits 1:1), scale 6 → 3× (96px).
+ *  Output dims equal the old 16px maps' (16×scale), so consumers are unchanged. */
+function renderToDataURL(
+  grid: (string | null)[][],
+  slots: Record<string, string>,
+  scale: number,
+): string {
+  const px = Math.max(1, Math.round(scale / 2));
+  const canvas = document.createElement("canvas");
+  canvas.width = GRID_SIZE * px;
+  canvas.height = GRID_SIZE * px;
+  const ctx = canvas.getContext("2d")!;
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const slot = grid[y][x];
+      if (!slot) continue;
+      ctx.fillStyle = slots[slot] ?? "#ff00ff";
+      ctx.fillRect(x * px, y * px, px, px);
+    }
+  }
+  return canvas.toDataURL();
 }
 
 /** Render (and cache) the sprite for a plant at a stage as a data URL. */
@@ -439,22 +486,26 @@ export function spriteFor(
 
   const grid = generateGrid(getPlantShape(iconKey), stage);
   const slots = buildSlotPalette(paletteFor(iconKey, category));
-  // 32px art. scale 2 → 1× (32px = TILE_PX, blits 1:1), scale 6 → 3× (96px).
-  // Output dims equal the old 16px maps' (16×scale), so consumers are unchanged.
-  const px = Math.max(1, Math.round(scale / 2));
-  const canvas = document.createElement("canvas");
-  canvas.width = GRID_SIZE * px;
-  canvas.height = GRID_SIZE * px;
-  const ctx = canvas.getContext("2d")!;
-  for (let y = 0; y < GRID_SIZE; y++) {
-    for (let x = 0; x < GRID_SIZE; x++) {
-      const slot = grid[y][x];
-      if (!slot) continue;
-      ctx.fillStyle = slots[slot] ?? "#ff00ff";
-      ctx.fillRect(x * px, y * px, px, px);
-    }
-  }
-  const url = canvas.toDataURL();
+  const url = renderToDataURL(grid, slots, scale);
+  cache.set(key, url);
+  return url;
+}
+
+/** Render (and cache) the harvested-produce icon for a plant as a data URL.
+ *  Stage-independent (the ripe yield only); recolors via the same palette as
+ *  the plant sprite. Keyed under the iconKey so accent/shape edits invalidate it. */
+export function produceFor(
+  iconKey: string,
+  category: PlantCategory,
+  scale = 2,
+): string {
+  const key = `${iconKey}/produce/${category}/${scale}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const grid = generateProduce(getPlantShape(iconKey));
+  const slots = buildSlotPalette(paletteFor(iconKey, category));
+  const url = renderToDataURL(grid, slots, scale);
   cache.set(key, url);
   return url;
 }

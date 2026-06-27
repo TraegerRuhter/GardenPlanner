@@ -17,6 +17,7 @@ import {
   waterloggingRisk,
 } from "../engines/waterlogging";
 import { effectiveSequence } from "../engines/growth";
+import { elevationAt } from "./gardenRepo";
 
 export async function runCarePass(today = todayISO()): Promise<number> {
   const active = await db.instances.where("status").equals("active").toArray();
@@ -56,21 +57,21 @@ export async function runCarePass(today = todayISO()): Promise<number> {
     const plant = plants.get(inst.plantId);
     if (!plant) continue;
 
-    // §31.2 risk for this instance's first tile
+    // §31.2 risk for this instance's first cell
     let risk: WaterloggingRisk = "none";
     const garden = gardens.get(inst.gardenId);
-    const area = garden?.areas.find((a) => a.id === inst.areaId);
-    if (area && recent.length > 0) {
+    const field = garden?.field;
+    if (field && recent.length > 0) {
       const t0 = inst.tiles[0];
-      const tile = area.tiles.find((t) => t.col === t0.col && t.row === t0.row);
-      const neighbors = area.tiles
-        .filter((t) => Math.max(Math.abs(t.col - t0.col), Math.abs(t.row - t0.row)) === 1)
-        .map((t) => t.elevationCm);
+      const neighbors: number[] = [];
+      for (let dc = -1; dc <= 1; dc++)
+        for (let dr = -1; dr <= 1; dr++)
+          if (dc || dr) neighbors.push(elevationAt(field, t0.col + dc, t0.row + dr));
       risk = waterloggingRisk({
-        drainage: area.soilDrainage,
+        drainage: field.soilDrainage,
         recentRainMm: recent.reduce((s, r) => s + r.precipMm, 0),
         forecastRainMm: future.slice(0, 2).reduce((s, r) => s + r.precipMm, 0),
-        depressionDepthCm: depressionDepthCm(tile?.elevationCm ?? 0, neighbors),
+        depressionDepthCm: depressionDepthCm(elevationAt(field, t0.col, t0.row), neighbors),
       });
     }
 

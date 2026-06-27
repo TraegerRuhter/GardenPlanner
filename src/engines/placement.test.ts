@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { PlantInstance } from "../types/models";
 import { companions, plants } from "../catalog";
-import { newArea, setTile } from "../db/gardenRepo";
 import {
   companionWarnings,
   frostPocketWarning,
   rotationWarnings,
   spacingWarnings,
   sunWarning,
+  type PlacementField,
 } from "./placement";
 
 const plantsById = new Map(plants.map((p) => [p.id, p]));
@@ -15,11 +15,15 @@ const tomato = plantsById.get("tomato")!;
 const basil = plantsById.get("basil")!;
 const kale = plantsById.get("kale")!;
 
-function inst(plantId: string, tiles: Array<{ col: number; row: number }>, areaId: string, plantedOn = "2026-05-01", status: PlantInstance["status"] = "active"): PlantInstance {
+const DEFAULT_CELL = 30.48;
+function field(cols: number, rows: number, elev: Map<string, number> = new Map()): PlacementField {
+  return { cols, rows, cellSizeCm: DEFAULT_CELL, elevationAt: (c, r) => elev.get(`${c},${r}`) ?? 0 };
+}
+
+function inst(plantId: string, tiles: Array<{ col: number; row: number }>, plantedOn = "2026-05-01", status: PlantInstance["status"] = "active"): PlantInstance {
   return {
     id: `i_${plantId}_${tiles[0].col}_${tiles[0].row}`,
     gardenId: "g",
-    areaId,
     plantId,
     tiles,
     plantingMethod: "direct_sow",
@@ -36,48 +40,47 @@ function inst(plantId: string, tiles: Array<{ col: number; row: number }>, areaI
 
 describe("placement validation (§12.6)", () => {
   it("warns when same-species neighbors violate in-row spacing", () => {
-    const area = newArea("bed", 8, 4); // 30.48 cm cells; tomato wants 45 cm
-    const existing = inst("tomato", [{ col: 2, row: 1 }], area.id);
-    const tooClose = spacingWarnings(area, [{ col: 3, row: 1 }], tomato, [existing], plantsById);
+    const f = field(8, 4); // 30.48 cm cells; tomato wants 45 cm
+    const existing = inst("tomato", [{ col: 2, row: 1 }]);
+    const tooClose = spacingWarnings(f, [{ col: 3, row: 1 }], tomato, [existing], plantsById);
     expect(tooClose).toHaveLength(1);
     expect(tooClose[0].kind).toBe("spacing");
     // two cells away ≈ 61 cm — fine
-    expect(spacingWarnings(area, [{ col: 4, row: 1 }], tomato, [existing], plantsById)).toHaveLength(0);
+    expect(spacingWarnings(f, [{ col: 4, row: 1 }], tomato, [existing], plantsById)).toHaveLength(0);
   });
 
-  it("flags antagonists and encourages companions on adjacent tiles", () => {
-    const area = newArea("bed", 8, 4);
-    const tomatoInst = inst("tomato", [{ col: 2, row: 1 }], area.id);
-    const friendly = companionWarnings(area, [{ col: 3, row: 1 }], basil, [tomatoInst], plantsById, companions);
+  it("flags antagonists and encourages companions on adjacent cells", () => {
+    const tomatoInst = inst("tomato", [{ col: 2, row: 1 }]);
+    const friendly = companionWarnings([{ col: 3, row: 1 }], basil, [tomatoInst], plantsById, companions);
     expect(friendly.some((w) => w.kind === "companion")).toBe(true);
-    const hostile = companionWarnings(area, [{ col: 3, row: 1 }], kale, [tomatoInst], plantsById, companions);
+    const hostile = companionWarnings([{ col: 3, row: 1 }], kale, [tomatoInst], plantsById, companions);
     expect(hostile.some((w) => w.kind === "antagonist")).toBe(true);
     // not adjacent → silent
-    expect(companionWarnings(area, [{ col: 6, row: 3 }], kale, [tomatoInst], plantsById, companions)).toHaveLength(0);
+    expect(companionWarnings([{ col: 6, row: 3 }], kale, [tomatoInst], plantsById, companions)).toHaveLength(0);
   });
 
-  it("warns when the same family grew in the tile within two seasons (§20)", () => {
-    const area = newArea("bed", 8, 4);
-    const lastYear = inst("tomato", [{ col: 1, row: 1 }], area.id, "2025-05-10", "removed");
+  it("warns when the same family grew in the cell within two seasons (§20)", () => {
+    const lastYear = inst("tomato", [{ col: 1, row: 1 }], "2025-05-10", "removed");
     const pepper = plantsById.get("pepper_sweet")!; // also solanaceae
-    const warns = rotationWarnings(area, [{ col: 1, row: 1 }], pepper, [lastYear], plantsById, 2026);
+    const warns = rotationWarnings([{ col: 1, row: 1 }], pepper, [lastYear], plantsById, 2026);
     expect(warns).toHaveLength(1);
     expect(warns[0].kind).toBe("rotation");
     // three years back → outside the window
-    const old = inst("tomato", [{ col: 1, row: 1 }], area.id, "2023-05-10", "removed");
-    expect(rotationWarnings(area, [{ col: 1, row: 1 }], pepper, [old], plantsById, 2026)).toHaveLength(0);
+    const old = inst("tomato", [{ col: 1, row: 1 }], "2023-05-10", "removed");
+    expect(rotationWarnings([{ col: 1, row: 1 }], pepper, [old], plantsById, 2026)).toHaveLength(0);
     // different family → fine
-    expect(rotationWarnings(area, [{ col: 1, row: 1 }], kale, [lastYear], plantsById, 2026)).toHaveLength(0);
+    expect(rotationWarnings([{ col: 1, row: 1 }], kale, [lastYear], plantsById, 2026)).toHaveLength(0);
   });
 
   it("flags frost pockets for tender plants only (§12.5)", () => {
-    const area = newArea("bed", 4, 4);
-    // dig a 8cm depression at (1,1) surrounded by raised soil
+    // dig a depression at (1,1) surrounded by raised soil (+8 cm)
+    const elev = new Map<string, number>();
     for (let c = 0; c <= 2; c++)
       for (let r = 0; r <= 2; r++)
-        if (!(c === 1 && r === 1)) setTile(area, c, r, { type: "empty" }, 8);
-    expect(frostPocketWarning(area, [{ col: 1, row: 1 }], tomato)).toHaveLength(1);
-    expect(frostPocketWarning(area, [{ col: 1, row: 1 }], kale)).toHaveLength(0); // hardy
+        if (!(c === 1 && r === 1)) elev.set(`${c},${r}`, 8);
+    const f = field(4, 4, elev);
+    expect(frostPocketWarning(f, [{ col: 1, row: 1 }], tomato)).toHaveLength(1);
+    expect(frostPocketWarning(f, [{ col: 1, row: 1 }], kale)).toHaveLength(0); // hardy
   });
 
   it("compares sun-map hours to the plant's minimum (§12.8)", () => {

@@ -64,7 +64,7 @@ export function recommend(plants: Plant[], site: SiteContext, prefs: Recommendat
   const zone = zoneNumeric(site.climate.hardinessZone);
   const out: Recommendation[] = [];
 
-  const freeTiles = site.garden ? countFreeTiles(site.garden) : undefined;
+  const freeTiles = site.garden ? countFreeTiles(site.garden, site.instances ?? []) : undefined;
   const placedPlantIds = new Set((site.instances ?? []).map((i) => i.plantId));
   const recentFamilies = new Set(
     (site.instances ?? [])
@@ -179,15 +179,10 @@ export function recommend(plants: Plant[], site: SiteContext, prefs: Recommendat
   return out.sort((a, b) => b.score - a.score);
 }
 
-function countFreeTiles(garden: Garden): number {
-  let free = 0;
-  for (const area of garden.areas) {
-    const occupied = new Set(
-      area.tiles.filter((t) => t.content.type !== "empty").map((t) => `${t.col},${t.row}`),
-    );
-    free += area.grid.cols * area.grid.rows - occupied.size;
-  }
-  return free;
+function countFreeTiles(garden: Garden, instances: PlantInstance[]): number {
+  const occupied = new Set<string>();
+  for (const i of instances) for (const t of i.tiles) occupied.add(`${t.col},${t.row}`);
+  return garden.field.cols * garden.field.rows - occupied.size;
 }
 
 function summerMonthlyPrecip(climate: ClimateProfile): number | undefined {

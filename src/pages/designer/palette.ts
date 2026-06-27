@@ -5,7 +5,9 @@
  */
 
 import type {
+  GroundType,
   HardscapeKind,
+  OverlaySub,
   StructureKind,
   WaterFeatureKind,
 } from "../../types/models";
@@ -16,9 +18,34 @@ export type Tool =
   | { t: "elev_up" }
   | { t: "elev_down" }
   | { t: "plant"; plantId: string }
-  | { t: "structure"; kind: StructureKind }
-  | { t: "hardscape"; kind: HardscapeKind }
-  | { t: "water"; kind: WaterFeatureKind };
+  | { t: "ground"; kind: GroundType }
+  | { t: "overlay"; sub: OverlaySub };
+
+/**
+ * Sub-cell infrastructure. "line" overlays thread through cell centers (drip /
+ * soaker); "strip" overlays are wide runs between cells (walkways). Placed by
+ * clicking a start cell then an end cell.
+ */
+export const OVERLAYS: Partial<Record<OverlaySub, { label: string; kind: "line" | "strip"; color: string; widthCm?: number }>> = {
+  drip: { label: "Drip line", kind: "line", color: "#4f8fc4" },
+  soaker: { label: "Soaker hose", kind: "line", color: "#3a6f9e" },
+  walkway: { label: "Walkway", kind: "strip", color: "#bcb4a4", widthCm: 45 },
+};
+export const OVERLAY_ORDER: OverlaySub[] = ["drip", "soaker", "walkway"];
+
+/** Carve-able ground surfaces. "grass" restores the living default. */
+export const GROUND: Record<GroundType, { label: string; color: string; swatch: string }> = {
+  grass: { label: "Grass", color: "#6aa94f", swatch: "🌿" },
+  soil: { label: "Soil", color: "#7a5a3e", swatch: "🟫" },
+  path: { label: "Path", color: "#c4ad8b", swatch: "🟨" },
+  mulch: { label: "Mulch", color: "#6e4f35", swatch: "🟤" },
+  gravel: { label: "Gravel", color: "#b5b0a4", swatch: "⬜" },
+  paver: { label: "Paver", color: "#b0a79b", swatch: "▦" },
+  rock: { label: "Rock", color: "#9aa0a6", swatch: "🪨" },
+};
+
+/** Order ground brushes appear in the palette (grass = the "erase to grass"). */
+export const GROUND_ORDER: GroundType[] = ["soil", "path", "mulch", "gravel", "paver", "rock", "grass"];
 
 export const STRUCTURES: Record<StructureKind, { label: string; glyph: string; color: string; heightCm: number }> = {
   trellis: { label: "Trellis", glyph: "#", color: "#8a6a4f", heightCm: 180 },

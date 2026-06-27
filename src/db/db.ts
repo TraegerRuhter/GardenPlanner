@@ -129,6 +129,26 @@ export class PlotDB extends Dexie {
     this.version(3).stores({
       spriteOverrides: "iconKey",
     });
+    // v4 — garden-builder redesign: the multi-"area" model becomes a single
+    // carve-able grass field. PlantInstance loses areaId (drop its index), and
+    // the garden-structural user tables reset for a clean fresh start.
+    this.version(4)
+      .stores({
+        instances: "id, gardenId, plantId, status",
+      })
+      .upgrade(async (tx) => {
+        for (const name of [
+          "gardens",
+          "instances",
+          "stageEvents",
+          "harvestEvents",
+          "pestSightings",
+          "tasks",
+          "journal",
+        ]) {
+          await tx.table(name).clear();
+        }
+      });
   }
 }
 

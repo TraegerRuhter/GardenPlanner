@@ -12,6 +12,7 @@ import type { Plant } from "../../types/models";
 import { useAppStore } from "../../store/appStore";
 import { formatDepthMm, formatLength, formatRange, formatTemp } from "../../lib/units";
 import { SpriteImg } from "../../components/SpriteImg";
+import { ProduceImg } from "../../components/ProduceImg";
 import { SpriteCustomizer } from "../../components/SpriteCustomizer";
 import { Badge } from "../../components/Badge";
 import { badgeTone } from "../../components/badgeTone";
@@ -50,7 +51,21 @@ export function PlantDetailPage() {
       rel: c,
       partner: partners[i],
     }));
-    return { plant, family, template, varietals, recipes, companions };
+    // Resolve plants referenced by recipe ingredients so each can show its produce icon.
+    const ingIds = [
+      ...new Set(
+        recipes.flatMap((r) =>
+          r.ingredients.map((ing) => ing.plantId).filter((id): id is string => !!id),
+        ),
+      ),
+    ];
+    const ingPlants = await db.catalog_plants.bulkGet(ingIds);
+    const recipePlants = new Map<string, Plant>();
+    ingIds.forEach((id, i) => {
+      const pl = ingPlants[i];
+      if (pl) recipePlants.set(id, pl);
+    });
+    return { plant, family, template, varietals, recipes, companions, recipePlants };
   }, [plantId]);
 
   if (data === undefined) return <Pad>Loading…</Pad>;
@@ -60,7 +75,7 @@ export function PlantDetailPage() {
         Unknown plant. <Link className="underline" to="/encyclopedia">Back to the encyclopedia.</Link>
       </Pad>
     );
-  const { plant, family, template, varietals, recipes, companions } = data;
+  const { plant, family, template, varietals, recipes, companions, recipePlants } = data;
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-6">
@@ -277,12 +292,22 @@ export function PlantDetailPage() {
                   <summary className="cursor-pointer text-[var(--color-canopy)]">
                     Ingredients & steps
                   </summary>
-                  <ul className="mt-1 list-disc pl-5">
-                    {r.ingredients.map((ing, i) => (
-                      <li key={i}>
-                        {ing.quantity} {ing.unit ?? ""} {ing.item}
-                      </li>
-                    ))}
+                  <ul className="mt-1 space-y-0.5">
+                    {r.ingredients.map((ing, i) => {
+                      const ingPlant = ing.plantId ? recipePlants.get(ing.plantId) : undefined;
+                      return (
+                        <li key={i} className="flex items-center gap-1.5">
+                          {ingPlant ? (
+                            <ProduceImg plant={ingPlant} size={20} className="shrink-0" />
+                          ) : (
+                            <span className="inline-block w-5 shrink-0 text-center text-[var(--color-ink-soft)]">·</span>
+                          )}
+                          <span>
+                            {ing.quantity} {ing.unit ?? ""} {ing.item}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                   <ol className="mt-2 list-decimal space-y-1 pl-5">
                     {r.steps.map((s, i) => (

@@ -1,14 +1,13 @@
 /**
  * Placement validation (§12.6): spacing, companions, rotation, frost pockets.
- * Pure functions — warnings are non-blocking badges, never hard stops.
+ * Pure functions — warnings are non-blocking badges, never hard stops. All
+ * placements share one garden field, so checks scan every instance in it.
  */
 
 import type {
   CompanionRelationship,
-  GardenArea,
   Plant,
   PlantInstance,
-  Tile,
 } from "../types/models";
 import { depressionDepthCm } from "./waterlogging";
 
@@ -23,22 +22,28 @@ interface Cell {
   row: number;
 }
 
-const dist = (a: Cell, b: Cell) =>
-  Math.hypot(a.col - b.col, a.row - b.row);
+/** Light geometry view of the field the placement engine needs. */
+export interface PlacementField {
+  cols: number;
+  rows: number;
+  cellSizeCm: number;
+  elevationAt: (col: number, row: number) => number;
+}
+
+const dist = (a: Cell, b: Cell) => Math.hypot(a.col - b.col, a.row - b.row);
 
 /** §12.6 spacing: same-species neighbors closer than spacing.inRowCm. */
 export function spacingWarnings(
-  area: GardenArea,
+  field: PlacementField,
   target: Cell[],
   plant: Plant,
   instances: PlantInstance[],
   plantsById: Map<string, Plant>,
 ): PlacementWarning[] {
   const out: PlacementWarning[] = [];
-  const cell = area.grid.cellSizeCm;
+  const cell = field.cellSizeCm;
   const neededCells = plant.spacing.inRowCm / cell;
   for (const inst of instances) {
-    if (inst.areaId !== area.id) continue;
     const other = plantsById.get(inst.plantId);
     if (!other || other.id !== plant.id) continue;
     for (const t of target) {
@@ -58,9 +63,8 @@ export function spacingWarnings(
   return out;
 }
 
-/** §12.6 companions: scan adjacent (8-neighborhood) tiles for relationships. */
+/** §12.6 companions: scan adjacent (8-neighborhood) cells for relationships. */
 export function companionWarnings(
-  area: GardenArea,
   target: Cell[],
   plant: Plant,
   instances: PlantInstance[],
@@ -69,7 +73,6 @@ export function companionWarnings(
 ): PlacementWarning[] {
   const adjacentPlantIds = new Set<string>();
   for (const inst of instances) {
-    if (inst.areaId !== area.id) continue;
     for (const t of target) {
       for (const ot of inst.tiles) {
         const d = Math.max(Math.abs(t.col - ot.col), Math.abs(t.row - ot.row));
@@ -104,11 +107,10 @@ export function companionWarnings(
 }
 
 /**
- * §20 rotation: warn when the same family occupied any target tile within
+ * §20 rotation: warn when the same family occupied any target cell within
  * the lookback window (default 2 seasons ≈ 2 years), using instance history.
  */
 export function rotationWarnings(
-  area: GardenArea,
   target: Cell[],
   plant: Plant,
   history: PlantInstance[],
@@ -117,7 +119,6 @@ export function rotationWarnings(
   lookbackYears = 2,
 ): PlacementWarning[] {
   for (const inst of history) {
-    if (inst.areaId !== area.id) continue;
     const other = plantsById.get(inst.plantId);
     if (!other || other.familyId !== plant.familyId) continue;
     if (other.id === plant.id && inst.status === "planned") continue; // self
@@ -138,17 +139,16 @@ export function rotationWarnings(
   return [];
 }
 
-/** §12.5 frost pocket: tile sits ≥5 cm below its neighbors. */
+/** §12.5 frost pocket: cell sits ≥5 cm below its neighbors. */
 export function frostPocketWarning(
-  area: GardenArea,
+  field: PlacementField,
   target: Cell[],
   plant: Plant,
 ): PlacementWarning[] {
   if (plant.frostTolerance !== "tender") return [];
   for (const t of target) {
-    const tile = area.tiles.find((x) => x.col === t.col && x.row === t.row);
-    const elev = tile?.elevationCm ?? 0;
-    const neighbors = neighborsOf(area, t).map((n) => n?.elevationCm ?? 0);
+    const elev = field.elevationAt(t.col, t.row);
+    const neighbors = neighborElevations(field, t);
     if (depressionDepthCm(elev, neighbors) >= 5) {
       return [
         {
@@ -163,15 +163,15 @@ export function frostPocketWarning(
   return [];
 }
 
-function neighborsOf(area: GardenArea, c: Cell): Array<Tile | undefined> {
-  const out: Array<Tile | undefined> = [];
+function neighborElevations(field: PlacementField, c: Cell): number[] {
+  const out: number[] = [];
   for (let dc = -1; dc <= 1; dc++) {
     for (let dr = -1; dr <= 1; dr++) {
       if (dc === 0 && dr === 0) continue;
       const col = c.col + dc;
       const row = c.row + dr;
-      if (col < 0 || row < 0 || col >= area.grid.cols || row >= area.grid.rows) continue;
-      out.push(area.tiles.find((t) => t.col === col && t.row === row));
+      if (col < 0 || row < 0 || col >= field.cols || row >= field.rows) continue;
+      out.push(field.elevationAt(col, row));
     }
   }
   return out;
@@ -196,7 +196,7 @@ export function sunWarning(
 }
 
 export function validatePlacement(args: {
-  area: GardenArea;
+  field: PlacementField;
   target: Cell[];
   plant: Plant;
   instances: PlantInstance[];
@@ -208,10 +208,10 @@ export function validatePlacement(args: {
 }): PlacementWarning[] {
   const year = args.currentYear ?? new Date().getFullYear();
   return [
-    ...spacingWarnings(args.area, args.target, args.plant, args.instances, args.plantsById),
-    ...companionWarnings(args.area, args.target, args.plant, args.instances, args.plantsById, args.companions),
-    ...rotationWarnings(args.area, args.target, args.plant, args.history, args.plantsById, year),
-    ...frostPocketWarning(args.area, args.target, args.plant),
+    ...spacingWarnings(args.field, args.target, args.plant, args.instances, args.plantsById),
+    ...companionWarnings(args.target, args.plant, args.instances, args.plantsById, args.companions),
+    ...rotationWarnings(args.target, args.plant, args.history, args.plantsById, year),
+    ...frostPocketWarning(args.field, args.target, args.plant),
     ...sunWarning(args.plant, args.sunHours),
   ];
 }

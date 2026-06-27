@@ -247,9 +247,9 @@ export interface Garden {
   locationId: string;
   unitSystem: UnitSystem;
   // Whole-garden orientation: bearing in degrees that "up/north on screen" maps to.
-  // 0 = screen-up is true north. Lets the user rotate the plot to reality.
+  // 0 = screen-up is true north. Drives the sun model; the view stays straight-on.
   northBearingDeg: number;
-  areas: GardenArea[];
+  field: GardenField; // the single continuous plot you carve a garden out of
   background?: GardenBackground; // §31.5 aerial/reference underlay
   createdAt: string;
   updatedAt: string;
@@ -257,20 +257,47 @@ export interface Garden {
 
 export type SoilDrainage = "fast" | "moderate" | "poor";
 
-export interface GardenArea {
+/**
+ * The garden plot is one continuous expanse of grass that you CARVE into. It is
+ * modeled as three independent planes so a single cell can hold several things
+ * at once (e.g. soil ground + a plant + a drip line through its middle):
+ *  - GROUND plane (this file's `ground`): the carve-able surface, per cell.
+ *  - PLANT plane: PlantInstances placed on cells (separate `instances` store).
+ *  - OVERLAY plane (`overlays`): sub-cell infrastructure in fractional cell
+ *    coordinates — x.5 threads a line through a cell center, x.0 runs along the
+ *    boundary between cells.
+ */
+export interface GardenField {
+  cols: number;
+  rows: number;
+  cellSizeCm: number; // real-world size of one cell edge (e.g. 30.48 = 1 ft)
+  soilDrainage: SoilDrainage; // §31.2; combines with cell elevation for waterlogging
+  ground: GroundCell[]; // sparse: grass (flat) is the unstored default
+  overlays: FieldOverlay[]; // sub-cell infrastructure (drip lines, walkways, …)
+}
+
+/** A carved ground cell. Absent cells are flat grass — the living default. */
+export type GroundType = "grass" | "soil" | "path" | "mulch" | "gravel" | "paver" | "rock";
+export interface GroundCell {
+  col: number;
+  row: number;
+  type: GroundType;
+  elevationCm: number; // relative elevation for slope/frost-pocket modeling
+}
+
+/**
+ * Sub-cell infrastructure overlay. `path` points are in FRACTIONAL cell
+ * coordinates: 4.5 = the center of column 4; 4.0 = the boundary between
+ * columns 3 and 4. A "line" is a 1-D polyline (drip/soaker/edging/fence); a
+ * "strip" is a widened path (a walkway between cells).
+ */
+export type OverlaySub = "drip" | "soaker" | "edging" | "fence" | "walkway";
+export interface FieldOverlay {
   id: string;
-  name: string; // "Raised bed A", "Patio containers"
-  kind: "in_ground" | "raised_bed" | "container_group" | "field";
-  soilDrainage: SoilDrainage; // §31.2; combines with tile elevation for waterlogging risk
-  // Position of this area's origin within the garden canvas (for satellite layout)
-  origin: { x: number; y: number }; // in garden canvas units
-  rotationDeg: number; // area can be rotated independently of garden north
-  grid: {
-    cols: number;
-    rows: number;
-    cellSizeCm: number; // real-world size of one tile edge (e.g. 30.48 = 1 ft)
-  };
-  tiles: Tile[]; // sparse: only non-empty tiles stored
+  kind: "line" | "strip";
+  sub: OverlaySub;
+  path: Array<{ x: number; y: number }>;
+  widthCm?: number; // strips only
 }
 
 export type StructureKind =
@@ -301,21 +328,6 @@ export type WaterFeatureKind =
   | "pond"
   | "spigot";
 
-export type TileContent =
-  | { type: "empty" }
-  | { type: "plant"; instanceId: string } // -> PlantInstance
-  | { type: "structure"; structure: StructureKind; heightCm: number }
-  | { type: "hardscape"; hardscape: HardscapeKind }
-  | { type: "water"; water: WaterFeatureKind };
-
-export interface Tile {
-  col: number;
-  row: number;
-  elevationCm: number; // relative elevation for slope/frost-pocket modeling
-  content: TileContent;
-  // Derived (not stored, computed by SunModel): sunHoursEstimate, isFrostPocket
-}
-
 // ---------------------------------------------------------------------------
 // §7.10 PlantInstance and StageEvent — a real planted thing
 // ---------------------------------------------------------------------------
@@ -336,7 +348,6 @@ export type InstanceStatus =
 export interface PlantInstance {
   id: string;
   gardenId: string;
-  areaId: string;
   plantId: string;
   varietalId?: string;
   // placement: one or more tiles (a tomato is one tile; a row of carrots may span tiles)

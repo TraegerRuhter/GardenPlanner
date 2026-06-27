@@ -8,9 +8,9 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import type { Plant, StructureKind } from "../../types/models";
+import type { Plant } from "../../types/models";
 import { SpriteImg } from "../../components/SpriteImg";
-import { HARDSCAPES, STRUCTURES, WATER, type Tool } from "./palette";
+import { GROUND, GROUND_ORDER, OVERLAYS, OVERLAY_ORDER, type Tool } from "./palette";
 
 const LS_KEY = "gp.designer.palette.v1";
 
@@ -132,45 +132,36 @@ export function DesignerPalette({
       render: () => <PlantPalette plants={plants} tool={tool} setTool={setTool} />,
     },
     {
-      id: "structures",
-      label: "Structures",
-      count: Object.keys(STRUCTURES).length,
+      id: "ground",
+      label: "Ground",
+      count: GROUND_ORDER.length,
       render: () => (
         <div className="flex flex-col gap-1">
-          {(Object.keys(STRUCTURES) as StructureKind[]).map((k) => (
-            <ToolBtn key={k} active={tool.t === "structure" && tool.kind === k} onClick={() => setTool({ t: "structure", kind: k })}>
-              {STRUCTURES[k].glyph} {STRUCTURES[k].label}
+          {GROUND_ORDER.map((k) => (
+            <ToolBtn key={k} active={tool.t === "ground" && tool.kind === k} onClick={() => setTool({ t: "ground", kind: k })}>
+              <span className="mr-1 inline-block h-3 w-3 rounded-sm align-middle" style={{ background: GROUND[k].color }} />
+              {GROUND[k].label}{k === "grass" ? " (restore)" : ""}
             </ToolBtn>
           ))}
         </div>
       ),
     },
     {
-      id: "hardscape",
-      label: "Hardscape",
-      count: Object.keys(HARDSCAPES).length,
+      id: "overlays",
+      label: "Infrastructure",
+      count: OVERLAY_ORDER.length,
       render: () => (
         <div className="flex flex-col gap-1">
-          {(Object.keys(HARDSCAPES) as Array<keyof typeof HARDSCAPES>).map((k) => (
-            <ToolBtn key={k} active={tool.t === "hardscape" && tool.kind === k} onClick={() => setTool({ t: "hardscape", kind: k })}>
-              <span className="mr-1 inline-block h-3 w-3 rounded-sm align-middle" style={{ background: HARDSCAPES[k].color }} />
-              {HARDSCAPES[k].label}
-            </ToolBtn>
-          ))}
-        </div>
-      ),
-    },
-    {
-      id: "water",
-      label: "Water",
-      count: Object.keys(WATER).length,
-      render: () => (
-        <div className="flex flex-col gap-1">
-          {(Object.keys(WATER) as Array<keyof typeof WATER>).map((k) => (
-            <ToolBtn key={k} active={tool.t === "water" && tool.kind === k} onClick={() => setTool({ t: "water", kind: k })}>
-              {WATER[k].glyph} {WATER[k].label}
-            </ToolBtn>
-          ))}
+          <p className="px-0.5 pb-0.5 text-[10px] leading-snug text-[var(--color-ink-soft)]">Click a start cell, then an end cell.</p>
+          {OVERLAY_ORDER.map((k) => {
+            const meta = OVERLAYS[k]!;
+            return (
+              <ToolBtn key={k} active={tool.t === "overlay" && tool.sub === k} onClick={() => setTool({ t: "overlay", sub: k })}>
+                <span className="mr-1 inline-block h-3 w-3 rounded-sm align-middle" style={{ background: meta.color }} />
+                {meta.label}
+              </ToolBtn>
+            );
+          })}
         </div>
       ),
     },

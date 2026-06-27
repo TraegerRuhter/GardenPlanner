@@ -516,3 +516,177 @@ const AUDIT = Object.keys(SHOWCASE);
 auditSheet(AUDIT.slice(0, 9), "/tmp/audit1.png", "Audit 1/3 — shapes 1-9 × all stages");
 auditSheet(AUDIT.slice(9, 17), "/tmp/audit2.png", "Audit 2/3 — shapes 10-17 × all stages");
 auditSheet(AUDIT.slice(17, 25), "/tmp/audit3.png", "Audit 3/3 — shapes 18-25 × all stages");
+
+// ---------------- PROTOTYPE: harvested-item ("fruit only") icons --------------
+// Centered single produce item per archetype; recolors via accent like the plants.
+const PROD_ITEM = {
+  roundfruit(g) { disc(g, 16, 18, 7, ["fh", "fm", "fl"], true); for (let y = 9; y < 12; y++) set(g, 16, y, "sm"); set(g, 18, 10, "lh"); set(g, 19, 9, "lm"); },
+  carrot(g) { for (let y = 9; y < 27; y++) { const w = Math.max(0, Math.round(5 - (y - 9) * 0.28)); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "rh" : x >= 2 ? "rl" : "rm"); } for (const ry of [12, 16, 20]) for (let x = -3; x <= 3; x += 2) set(g, 16 + x, ry, "rl"); foliage(g, [[16, 6, 2.3], [12, 7, 1.9], [20, 7, 1.9]], 16, 6); },
+  onion(g) { disc(g, 16, 18, 7, ["rh", "rm", "rl"], true); for (const dx of [-3, 0, 3]) for (let y = 12; y <= 24; y++) { if (dx * dx + (y - 18) * (y - 18) * 0.45 < 46) set(g, 16 + dx, y, "rl"); } for (const dx of [-2, 0, 2]) { set(g, 16 + dx, 10, "sm"); set(g, 16 + dx, 9, "sl"); } for (const dx of [-2, 0, 2]) set(g, 16 + dx, 26, "wl"); },
+  cucumber(g) { for (let i = 0; i < 18; i++) { const x = 8 + i, y = 22 - Math.round(i * 0.45); set(g, x, y, "fm"); set(g, x, y - 1, i > 0 && i < 17 ? "fh" : "fm"); set(g, x, y + 1, "fl"); } for (let i = 3; i < 15; i += 3) set(g, 8 + i, 21 - Math.round(i * 0.45), "fl"); },
+  pumpkin(g) { disc(g, 16, 19, 9, ["fh", "fm", "fl"], true); for (const dx of [-5, -2, 1, 4]) for (let y = -7; y <= 7; y++) if (dx * dx + y * y <= 81) set(g, 16 + dx, 19 + y, "fl"); set(g, 16, 9, "wl"); set(g, 17, 9, "wh"); set(g, 16, 10, "wl"); },
+  cabbage(g) { foliage(g, [[9, 21, 3.6], [23, 21, 3.6], [16, 24, 3.4]], 16, 22); disc(g, 16, 16, 9, ["lh", "lm", "ll"]); for (const off of [-6, -3, 0, 3, 6]) for (let dy = -8; dy <= 8; dy++) { const k = Math.sqrt(Math.max(0, 1 - (dy / 9) ** 2)); const x = 16 + Math.round(off * k), y = 16 + dy; if ((x - 16) ** 2 + (y - 16) ** 2 <= 80) set(g, x, y, "ld"); } set(g, 16, 26, "sl"); },
+  broccoli(g) { foliage(g, [[16, 13, 6], [11, 14, 3.5], [21, 14, 3.5], [13, 9, 3], [19, 9, 3], [16, 8, 3.5]], 16, 12); for (let i = 0; i < 24; i++) { const x = 10 + ((i * 7) % 14), y = 8 + ((i * 5) % 9); if ((x - 16) ** 2 + (y - 12) ** 2 < 36) set(g, x, y, "ld"); } for (let y = 18; y < 27; y++) for (let x = 14; x <= 18; x++) set(g, x, y, x < 16 ? "sh" : x < 17 ? "sm" : "sl"); },
+  corn(g) { for (let y = 8; y < 26; y++) for (let x = 13; x <= 20; x++) { const dx = (x - 16.5) / 4, dy = (y - 17) / 9; if (dx * dx + dy * dy <= 1) set(g, x, y, y % 2 === 0 ? "fh" : "fm"); } for (let y = 9; y < 25; y++) set(g, 20, y, "fl"); for (let y = 11; y < 27; y++) { set(g, 12, y, "ll"); set(g, 11, y + 1, "ld"); } set(g, 13, 7, "yh"); set(g, 15, 6, "yh"); },
+  peapod(g) { for (let i = 0; i < 17; i++) { const x = 8 + i, y = 18 + Math.round(Math.sin((i / 16) * Math.PI) * -5); set(g, x, y, "fm"); set(g, x, y - 1, "fh"); set(g, x, y + 1, "fl"); } for (let i = 2; i < 15; i += 3) { const x = 8 + i, y = 18 + Math.round(Math.sin((i / 16) * Math.PI) * -5); set(g, x, y, "fh"); set(g, x, y + 1, "fm"); } },
+  berries(g) { for (const [bx, by] of [[12, 14], [20, 14], [16, 12], [13, 20], [19, 20], [16, 22]]) disc(g, bx, by, 2.6, ["fh", "fm", "fl"], true); for (let y = 8; y < 12; y++) set(g, 16, y, "sm"); },
+  potato(g) { const cx = 16, cy = 17, L = [1, 3, 4, 5, 6, 6, 7, 7, 6, 5, 4, 2, 1], R = [2, 4, 6, 7, 7, 8, 8, 7, 7, 6, 4, 3, 1]; for (let i = 0; i < 13; i++) { const dy = i - 6; for (let x = -L[i]; x <= R[i]; x++) { const t = x + dy; set(g, cx + x, cy + dy, t <= -3 ? "rh" : t >= 4 ? "rl" : "rm"); } } for (const [ex, ey] of [[12, 14], [19, 13], [21, 18], [14, 21], [16, 17]]) { set(g, ex, ey, "rl"); set(g, ex, ey - 1, "kl"); } },
+  strawberry(g) { for (let y = 12; y < 27; y++) { const t = (y - 12) / 15, w = Math.round((1 - t) * 7 + 1); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "fh" : x >= 2 ? "fl" : "fm"); } for (const [sx, sy] of [[13, 16], [19, 16], [15, 19], [18, 20], [16, 22], [14, 23]]) set(g, sx, sy, "bm"); foliage(g, [[16, 10, 2.6], [13, 11, 1.8], [19, 11, 1.8]], 16, 10); set(g, 16, 8, "sm"); },
+  seedhead(g) { for (let a = 0; a < 12; a++) { const ang = a / 12 * Math.PI * 2; set(g, 16 + Math.round(Math.cos(ang) * 9), 16 + Math.round(Math.sin(ang) * 9), "fh"); set(g, 16 + Math.round(Math.cos(ang) * 8), 16 + Math.round(Math.sin(ang) * 8), "fm"); } disc(g, 16, 16, 6, ["ym", "yl", "yl"]); for (let y = -5; y <= 5; y++) for (let x = -5; x <= 5; x++) if (x * x + y * y <= 26 && (x + y) % 2 === 0) set(g, 16 + x, 16 + y, "yh"); },
+  sprig(g) { for (let y = 9; y < 26; y++) set(g, 16, y, "sm"); for (const [lx, ly] of [[16, 9], [13, 12], [19, 12], [13, 16], [19, 16], [14, 20], [18, 20]]) foliage(g, [[lx, ly, 2.2]], lx, ly); },
+  bloom(g) { for (let y = 18; y < 27; y++) set(g, 16, y, "sm"); for (let a = 0; a < 8; a++) { const ang = a / 8 * Math.PI * 2; disc(g, 16 + Math.round(Math.cos(ang) * 6), 14 + Math.round(Math.sin(ang) * 6), 3, ["fh", "fm", "fl"]); } disc(g, 16, 14, 3, ["fd", "fd", "fd"]); disc(g, 16, 14, 2, ["yh", "ym", "yl"]); },
+  grainhead(g) { for (let y = 15; y < 27; y++) set(g, 16, y, "sl"); for (let y = 5; y < 17; y++) { const t = (y - 5) / 12, w = Math.round(Math.sin(t * Math.PI) * 3); for (let x = -w; x <= w; x++) set(g, 16 + x, y, (x + y) % 2 === 0 ? "fh" : "fm"); } for (const dx of [-1, 0, 1]) set(g, 16 + dx, 4, "fl"); },
+  caneberry(g) { disc(g, 16, 16, 7, ["fh", "fm", "fl"]); for (let y = -6; y <= 6; y += 2) for (let x = -6; x <= 6; x += 2) if (x * x + y * y <= 42) set(g, 16 + x, 16 + y, "fl"); for (let y = 8; y < 11; y++) set(g, 16, y, "sm"); },
+  aloeleaf(g) { for (let y = 6; y < 27; y++) { const w = Math.max(0, Math.round((1 - (y - 6) / 21) * 4)); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x < 0 ? "lh" : x > 0 ? "ll" : "lm"); } for (let y = 10; y < 26; y += 3) { const w = Math.max(0, Math.round((1 - (y - 6) / 21) * 4)); set(g, 16 - w - 1, y, "ld"); set(g, 16 + w + 1, y, "ld"); } },
+  spear(g) { for (let y = 5; y < 27; y++) { const w = y < 10 ? 1 : 2; for (let x = -w; x <= w; x++) set(g, 16 + x, y, x < 0 ? "lh" : x > 0 ? "ll" : "lm"); } for (let y = 5; y < 11; y++) { set(g, 15, y, "ld"); set(g, 17, y, "ld"); } },
+  stalkbunch(g) { for (const dx of [-5, -2, 1, 4]) { for (let y = 8; y < 26; y++) { set(g, 16 + dx, y, "sh"); set(g, 16 + dx + 1, y, "sl"); } foliage(g, [[16 + dx, 7, 2]], 16 + dx, 7); } for (let x = 10; x < 23; x++) { set(g, x, 18, "ld"); set(g, x, 19, "ld"); } },
+  tuna(g) { for (let y = 8; y < 25; y++) { const t = (y - 8) / 17, w = Math.round(Math.sin(t * Math.PI) * 5 + 1); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "fh" : x >= 2 ? "fl" : "fm"); } for (const [sx, sy] of [[13, 12], [19, 12], [16, 15], [14, 19], [18, 19], [16, 21]]) set(g, sx, sy, "bh"); },
+  sprout(g) { disc(g, 16, 16, 7, ["lh", "lm", "ll"]); for (const off of [-4, 0, 4]) for (let dy = -6; dy <= 6; dy++) { const k = Math.sqrt(Math.max(0, 1 - (dy / 7) ** 2)); const x = 16 + Math.round(off * k), y = 16 + dy; if ((x - 16) ** 2 + (y - 16) ** 2 <= 48) set(g, x, y, "ld"); } set(g, 13, 11, "lh"); set(g, 19, 11, "lh"); set(g, 16, 25, "sl"); set(g, 16, 24, "sm"); },
+  leafy(g) { foliage(g, [[10, 16, 5], [22, 16, 5], [13, 12, 4.5], [19, 12, 4.5], [16, 14, 6], [16, 20, 5]], 16, 16); disc(g, 16, 17, 3, ["lh", "lh", "lm"]); for (const [hx, hy] of [[11, 10], [16, 8], [21, 10], [13, 11], [19, 11]]) set(g, hx, hy, "lh"); for (let i = 0; i < 4; i++) set(g, 14 + i, 7 + (i % 2), "ld"); },
+};
+const PRODUCE = [
+  { n: "tomato (bush)", d: "roundfruit", p: { ...BP, f: "#d23c2e", F: "#a02a20" } },
+  { n: "apple (tree)", d: "roundfruit", p: { ...BP, f: "#d6403a", F: "#a82c28" } },
+  { n: "carrot (root)", d: "carrot", p: { ...BP, f: "#e88a2e", F: "#c06a1e" } },
+  { n: "potato (tuber)", d: "potato", p: { ...BP, f: "#c9a26a", F: "#9a774a" } },
+  { n: "onion (bulb)", d: "onion", p: { ...BP, f: "#c9a26a", F: "#a8854f" } },
+  { n: "cucumber (vine)", d: "cucumber", p: { ...BP, f: "#3f8f4f", F: "#2f6f3e" } },
+  { n: "pumpkin (gourd)", d: "pumpkin", p: { ...BP, f: "#e0701f", F: "#b4540f" } },
+  { n: "peas (climbing)", d: "peapod", p: { ...BP, f: "#7ab648", F: "#5c9233" } },
+  { n: "corn (cob)", d: "corn", p: { ...BP, f: "#e8c84a", F: "#c2a52e" } },
+  { n: "wheat (grass)", d: "grainhead", p: { ...BP, f: "#d9c26a", F: "#b5a04e" } },
+  { n: "cabbage (head)", d: "cabbage", p: { ...BP, l: "#86c060", L: "#5f9440", f: "#86c060", F: "#5f9440" } },
+  { n: "lettuce (leafy)", d: "leafy", p: { ...BP, l: "#8fcf6f", L: "#6aa84f", f: "#8fcf6f", F: "#6aa84f" } },
+  { n: "broccoli (crown)", d: "broccoli", p: { ...BP, l: "#3f8f4f", L: "#2f6f3e", f: "#3f8f4f", F: "#2f6f3e" } },
+  { n: "brussels (sprouts)", d: "sprout", p: { ...BP, l: "#4f8a4a", L: "#3a6a36", f: "#4f8a4a", F: "#3a6a36" } },
+  { n: "blueberry (shrub)", d: "berries", p: { ...BP, f: "#5566b0", F: "#3a4684" } },
+  { n: "raspberry (cane)", d: "caneberry", p: { ...BP, f: "#c0304f", F: "#8e2038" } },
+  { n: "currant (berry)", d: "berries", p: { ...BP, f: "#c0303a", F: "#8e2028" } },
+  { n: "strawberry (mat)", d: "strawberry", p: { ...BP, f: "#e23b4b", F: "#b22a38" } },
+  { n: "sunflower (tall)", d: "seedhead", p: { ...BP, f: "#f2c12e", F: "#d29a1e" } },
+  { n: "zinnia (flower)", d: "bloom", p: { ...BP, f: "#e76fb3", F: "#c44f93" } },
+  { n: "basil (herb)", d: "sprig", p: { ...BP, l: "#5fae54", L: "#3a7d44", f: "#5fae54", F: "#3a7d44" } },
+  { n: "celery (stalk)", d: "stalkbunch", p: { ...BP, s: "#9bc46a", l: "#8fb05a", L: "#6c8a3e", f: "#8fb05a", F: "#6c8a3e" } },
+  { n: "asparagus (fern)", d: "spear", p: { ...BP, l: "#6aa83f", L: "#4f8a2c", f: "#6aa83f", F: "#4f8a2c" } },
+  { n: "aloe (succulent)", d: "aloeleaf", p: { ...BP, l: "#6fae84", L: "#4c8a64", f: "#6fae84", F: "#4c8a64" } },
+  { n: "prickly pear (cactus)", d: "tuna", p: { ...BP, f: "#c0407a", F: "#922f5c" } },
+];
+const PCOLS = 5, PSC = 4, PSP = 128, PCW = 136, PCH = 152, PPAD = 12, PTOP = 34;
+const prows = Math.ceil(PRODUCE.length / PCOLS);
+const psheet = createCanvas(PCOLS * PCW + PPAD * 2, prows * PCH + PTOP + PPAD);
+const px2 = psheet.getContext("2d");
+ px2.fillStyle = "#cdbfa6"; px2.fillRect(0, 0, psheet.width, psheet.height);
+ px2.imageSmoothingEnabled = false;
+ px2.fillStyle = "#2a1d13"; px2.font = "bold 18px sans-serif";
+ px2.fillText("PROTOTYPE — harvested-item icons (recolor per crop)", PPAD, 24);
+PRODUCE.forEach((it, i) => {
+  const c = i % PCOLS, r = (i / PCOLS) | 0, x = PPAD + c * PCW, y = PTOP + r * PCH;
+  const g = newGrid(); PROD_ITEM[it.d](g); outline(g);
+   px2.drawImage(renderGrid(g, appPalette(it.p), PSC), x + (PCW - PSP) / 2, y, PSP, PSP);
+   px2.fillStyle = "#2a1d13"; px2.font = "12px sans-serif";
+   px2.fillText(it.n, x + (PCW - PSP) / 2 + 2, y + PSP + 12);
+});
+writeFileSync("/tmp/produce.png", psheet.toBuffer("image/png"));
+console.log("wrote /tmp/produce.png", psheet.width + "x" + psheet.height);
+
+// --------- APP-FAITHFUL: real CATEGORY_PALETTES + ACCENTS as the app resolves --------
+// Mirrors src/sprites/sprites.ts. Verifies exactly what ships (leaf-based crops
+// inherit the category leaf green, like the plant sprites; fruit crops use accents).
+const CAT = {
+  vegetable: { ...BP, f: "#d23c2e", F: "#a02a20" },
+  herb: { ...BP, l: "#6fbf63", L: "#4c9950", f: "#e9e6ff", F: "#c9c2f0" },
+  fruit: { ...BP, l: "#4c9950", L: "#2f6f3e", f: "#7a4fb3", F: "#5b3a8c" },
+  flower: { ...BP, f: "#e76fb3", F: "#c44f93" },
+  shrub: { ...BP, l: "#3f8f4f", L: "#2f6f3e", f: "#c94f4f", F: "#a03a3a" },
+  tree: { ...BP, l: "#3f8f4f", L: "#2f6f3e", f: "#c94f4f", F: "#a03a3a" },
+};
+// [label, drawName(by shape), category, accent] — one real crop per archetype.
+const APP25 = [
+  ["tomato (bush)", "roundfruit", "vegetable", { f: "#d23c2e", F: "#a02a20" }],
+  ["apple (tree)", "roundfruit", "tree", { f: "#d6403a", F: "#a82c28" }],
+  ["carrot (root)", "carrot", "vegetable", { f: "#e88a2e", F: "#c06a1e" }],
+  ["potato (tuber)", "potato", "vegetable", { f: "#c9a26a", F: "#9a774a" }],
+  ["onion (bulb)", "onion", "vegetable", { f: "#c9a26a", F: "#a8854f" }],
+  ["cucumber (vine)", "cucumber", "vegetable", { f: "#3f8f4f", F: "#2f6f3e" }],
+  ["pumpkin (gourd)", "pumpkin", "vegetable", { f: "#e0701f", F: "#b4540f" }],
+  ["snap pea (climbing)", "peapod", "vegetable", { f: "#8fcf6f", F: "#6aa84f" }],
+  ["sweet corn (cob)", "corn", "vegetable", { f: "#e8c84a", F: "#c2a52e" }],
+  ["lemongrass (grass)", "grainhead", "vegetable", { f: "#9bbf6a", F: "#78994a" }],
+  ["cabbage (head)", "cabbage", "vegetable", { f: "#a8d08a", F: "#84ab66" }],
+  ["lettuce (leafy)", "leafy", "vegetable", { f: "#8fcf6f", F: "#6aa84f" }],
+  ["broccoli (crown)", "broccoli", "vegetable", { f: "#3f8f4f", F: "#2f6f3e" }],
+  ["brussels (sprouts)", "sprout", "vegetable", { f: "#4f8a4a", F: "#3a6a36" }],
+  ["blueberry (shrub)", "berries", "shrub", { f: "#5566b0", F: "#3a4684" }],
+  ["raspberry (cane)", "caneberry", "fruit", { f: "#c0304f", F: "#8e2038" }],
+  ["currant (berry)", "berries", "shrub", { f: "#9a1f3a", F: "#6e1428" }],
+  ["strawberry (mat)", "strawberry", "fruit", { f: "#e23b4b", F: "#b22a38" }],
+  ["sunflower (tall)", "seedhead", "flower", { f: "#f2c12e", F: "#d29a1e" }],
+  ["zinnia (flower)", "bloom", "flower", { f: "#e2487f", F: "#b8366a" }],
+  ["basil (herb)", "sprig", "herb", { f: "#efe9ff", F: "#cfc6ee" }],
+  ["celery (stalk)", "stalkbunch", "vegetable", { f: "#9bc46a", F: "#79a04a" }],
+  ["asparagus (fern)", "spear", "vegetable", { f: "#6aa83f", F: "#4f8a2c" }],
+  ["aloe (succulent)", "aloeleaf", "fruit", { f: "#e8703a", F: "#bd5526", l: "#6fae84", L: "#4c8a64" }],
+  ["prickly pear (cactus)", "tuna", "fruit", { f: "#c0407a", F: "#922f5c" }],
+];
+const arows2 = Math.ceil(APP25.length / PCOLS);
+const asheet2 = createCanvas(PCOLS * PCW + PPAD * 2, arows2 * PCH + PTOP + PPAD);
+const ax2 = asheet2.getContext("2d");
+ax2.fillStyle = "#cdbfa6"; ax2.fillRect(0, 0, asheet2.width, asheet2.height);
+ax2.imageSmoothingEnabled = false;
+ax2.fillStyle = "#2a1d13"; ax2.font = "bold 18px sans-serif";
+ax2.fillText("APP-FAITHFUL — produce as the app recolors it (category + accent)", PPAD, 24);
+APP25.forEach(([label, draw, cat, accent], i) => {
+  const c = i % PCOLS, r = (i / PCOLS) | 0, x = PPAD + c * PCW, y = PTOP + r * PCH;
+  const g = newGrid(); PROD_ITEM[draw](g); outline(g);
+  ax2.drawImage(renderGrid(g, appPalette({ ...CAT[cat], ...accent }), PSC), x + (PCW - PSP) / 2, y, PSP, PSP);
+  ax2.fillStyle = "#2a1d13"; ax2.font = "12px sans-serif";
+  ax2.fillText(label, x + (PCW - PSP) / 2 + 2, y + PSP + 12);
+});
+writeFileSync("/tmp/produce-app.png", asheet2.toBuffer("image/png"));
+console.log("wrote /tmp/produce-app.png", asheet2.width + "x" + asheet2.height);
+
+// --------- LEAF/STALK: accent-driven foliage (mirrors paletteFor promotion) --------
+const LEAF_SET = new Set(["leafy", "head", "crown", "sprouts", "fern"]);
+function appResolve(shape, cat, accent) {
+  const p = { ...CAT[cat], ...accent };
+  if (accent.f !== undefined) {
+    if (LEAF_SET.has(shape)) { if (accent.l === undefined) p.l = accent.f; if (accent.L === undefined) p.L = accent.F ?? p.L; }
+    else if (shape === "stalk" && accent.s === undefined) p.s = accent.f;
+  }
+  return p;
+}
+const DRAW_BY_SHAPE = { leafy: "leafy", head: "cabbage", crown: "broccoli", sprouts: "sprout", fern: "spear", stalk: "stalkbunch" };
+const LEAFCROPS = [
+  ["kale", "leafy", "vegetable", { f: "#3a7d5c", F: "#2a5c44" }],
+  ["lettuce", "leafy", "vegetable", { f: "#8fcf6f", F: "#6aa84f" }],
+  ["spinach", "leafy", "vegetable", { f: "#3a7d44", F: "#2a5c33" }],
+  ["red amaranth", "leafy", "vegetable", { f: "#c0305a", F: "#981f44" }],
+  ["bok choy", "leafy", "vegetable", { f: "#bcd07a", F: "#97ab58" }],
+  ["cabbage", "head", "vegetable", { f: "#a8d08a", F: "#84ab66" }],
+  ["radicchio", "head", "vegetable", { f: "#a83048", F: "#821f34" }],
+  ["napa cabbage", "head", "vegetable", { f: "#cdd89a", F: "#a8b478" }],
+  ["broccoli", "crown", "vegetable", { f: "#3f8f4f", F: "#2f6f3e" }],
+  ["cauliflower", "crown", "vegetable", { f: "#eee8d0", F: "#ccc6ae" }],
+  ["romanesco", "crown", "vegetable", { f: "#b0d050", F: "#88b038" }],
+  ["purple sprouting", "crown", "vegetable", { f: "#7a5a8a", F: "#5c4068" }],
+  ["brussels", "sprouts", "vegetable", { f: "#4f8a4a", F: "#3a6a36" }],
+  ["asparagus", "fern", "vegetable", { f: "#6aa83f", F: "#4f8a2c" }],
+  ["celery", "stalk", "vegetable", { f: "#9bc46a", F: "#79a04a" }],
+  ["rhubarb", "stalk", "fruit", { f: "#c0392b", F: "#8e2b20", s: "#c0392b" }],
+];
+const lrows = Math.ceil(LEAFCROPS.length / PCOLS);
+const lsheet = createCanvas(PCOLS * PCW + PPAD * 2, lrows * PCH + PTOP + PPAD);
+const lx = lsheet.getContext("2d");
+lx.fillStyle = "#cdbfa6"; lx.fillRect(0, 0, lsheet.width, lsheet.height);
+lx.imageSmoothingEnabled = false;
+lx.fillStyle = "#2a1d13"; lx.font = "bold 18px sans-serif";
+lx.fillText("LEAF/STALK — accent now drives the foliage (distinct per crop)", PPAD, 24);
+LEAFCROPS.forEach(([label, shape, cat, accent], i) => {
+  const c = i % PCOLS, r = (i / PCOLS) | 0, x = PPAD + c * PCW, y = PTOP + r * PCH;
+  const g = newGrid(); PROD_ITEM[DRAW_BY_SHAPE[shape]](g); outline(g);
+  lx.drawImage(renderGrid(g, appPalette(appResolve(shape, cat, accent)), PSC), x + (PCW - PSP) / 2, y, PSP, PSP);
+  lx.fillStyle = "#2a1d13"; lx.font = "12px sans-serif";
+  lx.fillText(label, x + (PCW - PSP) / 2 + 2, y + PSP + 12);
+});
+writeFileSync("/tmp/produce-leaf.png", lsheet.toBuffer("image/png"));
+console.log("wrote /tmp/produce-leaf.png", lsheet.width + "x" + lsheet.height);

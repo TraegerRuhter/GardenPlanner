@@ -1,11 +1,9 @@
-/** §24 — flatten a garden into accessible mirror rows (pure). */
+/** §24 — flatten a garden field into accessible mirror rows (pure). */
 
 import type { Garden, Plant, PlantInstance } from "../../types/models";
-import { HARDSCAPES, STRUCTURES, WATER } from "./palette";
+import { GROUND, OVERLAYS } from "./palette";
 
 export interface MirrorRow {
-  areaId: string;
-  areaName: string;
   col: number;
   row: number;
   kind: string;
@@ -18,47 +16,47 @@ export function mirrorRows(
   instances: PlantInstance[],
   plantsById: Map<string, Plant>,
 ): MirrorRow[] {
-  const instById = new Map(instances.map((i) => [i.id, i]));
   const rows: MirrorRow[] = [];
-  for (const area of garden.areas) {
-    for (const t of area.tiles) {
-      const c = t.content;
-      if (c.type === "empty") {
-        if (t.elevationCm !== 0)
-          rows.push({
-            areaId: area.id, areaName: area.name, col: t.col, row: t.row,
-            kind: "elevation", detail: `${t.elevationCm > 0 ? "+" : ""}${t.elevationCm} cm`,
-          });
-        continue;
-      }
-      if (c.type === "plant") {
-        const inst = instById.get(c.instanceId);
-        const plant = inst && plantsById.get(inst.plantId);
-        rows.push({
-          areaId: area.id, areaName: area.name, col: t.col, row: t.row,
-          kind: inst?.status === "planned" ? "plant (planned)" : "plant",
-          detail: plant?.commonName ?? c.instanceId,
-          stage: inst?.status === "planned" ? "—" : inst?.currentStage,
-        });
-      } else if (c.type === "structure") {
-        rows.push({
-          areaId: area.id, areaName: area.name, col: t.col, row: t.row,
-          kind: "structure", detail: `${STRUCTURES[c.structure].label}, ${c.heightCm} cm`,
-        });
-      } else if (c.type === "hardscape") {
-        rows.push({
-          areaId: area.id, areaName: area.name, col: t.col, row: t.row,
-          kind: "hardscape", detail: HARDSCAPES[c.hardscape].label,
-        });
-      } else if (c.type === "water") {
-        rows.push({
-          areaId: area.id, areaName: area.name, col: t.col, row: t.row,
-          kind: "water", detail: WATER[c.water].label,
-        });
-      }
+
+  // carved ground (non-default cells: a ground type and/or an elevation)
+  for (const g of garden.field.ground) {
+    const parts: string[] = [];
+    if (g.type !== "grass") parts.push(GROUND[g.type].label);
+    if (g.elevationCm !== 0) parts.push(`${g.elevationCm > 0 ? "+" : ""}${g.elevationCm} cm`);
+    if (parts.length === 0) continue;
+    rows.push({
+      col: g.col,
+      row: g.row,
+      kind: g.type !== "grass" ? "ground" : "elevation",
+      detail: parts.join(", "),
+    });
+  }
+
+  // plants
+  for (const inst of instances) {
+    const plant = plantsById.get(inst.plantId);
+    for (const t of inst.tiles) {
+      rows.push({
+        col: t.col,
+        row: t.row,
+        kind: inst.status === "planned" ? "plant (planned)" : "plant",
+        detail: plant?.commonName ?? inst.plantId,
+        stage: inst.status === "planned" ? "—" : inst.currentStage,
+      });
     }
   }
-  return rows.sort(
-    (a, b) => a.areaName.localeCompare(b.areaName) || a.row - b.row || a.col - b.col,
-  );
+
+  // infrastructure overlays (listed at their start cell)
+  for (const o of garden.field.overlays) {
+    const a = o.path[0];
+    const b = o.path[o.path.length - 1];
+    rows.push({
+      col: Math.floor(a.x),
+      row: Math.floor(a.y),
+      kind: "infrastructure",
+      detail: `${OVERLAYS[o.sub]?.label ?? o.sub} → (${Math.floor(b.x)},${Math.floor(b.y)})`,
+    });
+  }
+
+  return rows.sort((a, b) => a.row - b.row || a.col - b.col);
 }
