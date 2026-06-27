@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Plant } from "../../types/models";
 import { SpriteImg } from "../../components/SpriteImg";
-import { GROUND, GROUND_ORDER, type Tool } from "./palette";
+import { GROUND, GROUND_ORDER, OVERLAYS, OVERLAY_ORDER, type Tool } from "./palette";
 
 const LS_KEY = "gp.designer.palette.v1";
 
@@ -143,6 +143,25 @@ export function DesignerPalette({
               {GROUND[k].label}{k === "grass" ? " (restore)" : ""}
             </ToolBtn>
           ))}
+        </div>
+      ),
+    },
+    {
+      id: "overlays",
+      label: "Infrastructure",
+      count: OVERLAY_ORDER.length,
+      render: () => (
+        <div className="flex flex-col gap-1">
+          <p className="px-0.5 pb-0.5 text-[10px] leading-snug text-[var(--color-ink-soft)]">Click a start cell, then an end cell.</p>
+          {OVERLAY_ORDER.map((k) => {
+            const meta = OVERLAYS[k]!;
+            return (
+              <ToolBtn key={k} active={tool.t === "overlay" && tool.sub === k} onClick={() => setTool({ t: "overlay", sub: k })}>
+                <span className="mr-1 inline-block h-3 w-3 rounded-sm align-middle" style={{ background: meta.color }} />
+                {meta.label}
+              </ToolBtn>
+            );
+          })}
         </div>
       ),
     },

@@ -18,18 +18,21 @@ import type {
   GardenField,
   GroundType,
   Location,
+  OverlaySub,
   Plant,
   PlantInstance,
   SoilDrainage,
 } from "../../types/models";
 import {
   activeInstancesForGarden,
+  addOverlaySegment,
   clearPlantAt,
   createGarden,
   elevationAt,
   groundTypeAt,
   placePlant,
   plantOccupant,
+  removeOverlayAt,
   saveGarden,
   setElevation,
   setGround,
@@ -43,7 +46,7 @@ import { GardenCanvas } from "./GardenCanvas";
 import { CanvasToolbar, DesignerPalette } from "./DesignerPalette";
 import { MirrorTable } from "./MirrorTable";
 import { mirrorRows } from "./mirrorRows";
-import { GROUND, type Tool } from "./palette";
+import { GROUND, OVERLAYS, type Tool } from "./palette";
 
 export default function DesignerPage() {
   const activeGardenId = useAppStore((s) => s.activeGardenId);
@@ -139,6 +142,11 @@ function DesignerBody({
   const [showMirror, setShowMirror] = useState(false);
   // Field mode = the stark, gridded editing view; off = lively preview (§ user).
   const [fieldMode, setFieldMode] = useState(true);
+  // First click of a two-click overlay run (drip/soaker/walkway): start cell.
+  const [pendingOverlay, setPendingOverlay] = useState<{ col: number; row: number; sub: OverlaySub } | null>(null);
+
+  // Changing tools drops any half-drawn overlay.
+  const selectTool = (t: Tool) => { setPendingOverlay(null); setTool(t); };
 
   const plantsById = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
   const latDeg = climate?.location.lat ?? 45;
@@ -167,8 +175,11 @@ function DesignerBody({
   }
 
   async function eraseAt(col: number, row: number) {
-    const removed = await clearPlantAt(col, row, instances);
-    if (!removed) await mutateGarden((g) => setGround(g.field, col, row, "grass"));
+    // Priority: a plant, then an overlay passing through, then carved ground.
+    if (await clearPlantAt(col, row, instances)) { setSelected(null); return; }
+    await mutateGarden((g) => {
+      if (!removeOverlayAt(g.field, col, row)) setGround(g.field, col, row, "grass");
+    });
     setSelected(null);
   }
 
@@ -188,6 +199,23 @@ function DesignerBody({
       }
       case "ground": {
         await mutateGarden((g) => setGround(g.field, col, row, tool.kind));
+        return;
+      }
+      case "overlay": {
+        const meta = OVERLAYS[tool.sub];
+        if (!meta) return;
+        // First click sets the start; second click lays a straight run to here.
+        if (!pendingOverlay || pendingOverlay.sub !== tool.sub) {
+          setPendingOverlay({ col, row, sub: tool.sub });
+          return;
+        }
+        if (pendingOverlay.col === col && pendingOverlay.row === row) {
+          setPendingOverlay(null); // clicking the start again cancels
+          return;
+        }
+        const start = { col: pendingOverlay.col, row: pendingOverlay.row };
+        await mutateGarden((g) => addOverlaySegment(g.field, tool.sub, meta.kind, start, { col, row }, meta.widthCm));
+        setPendingOverlay(null);
         return;
       }
       case "plant": {
@@ -294,17 +322,18 @@ function DesignerBody({
 
       <div className="flex flex-col gap-3 lg:flex-row">
         {/* palette */}
-        <DesignerPalette plants={plants} tool={tool} setTool={setTool} />
+        <DesignerPalette plants={plants} tool={tool} setTool={selectTool} />
 
         {/* canvas + inspector */}
         <div className="order-1 min-w-0 flex-1 lg:order-2">
-          <CanvasToolbar tool={tool} setTool={setTool} />
+          <CanvasToolbar tool={tool} setTool={selectTool} />
           <GardenCanvas
             garden={garden}
             instances={instances}
             plantsById={plantsById}
             sunMap={sunMap}
             selected={selected}
+            pendingOverlay={pendingOverlay}
             fieldMode={fieldMode}
             onCellTap={(c, r) => void applyToolAtCell(c, r)}
             height={460}
@@ -369,6 +398,7 @@ function toolLabel(tool: Tool, plantsById: Map<string, { commonName: string }>):
     case "elev_down": return "Lower −5cm";
     case "plant": return plantsById.get(tool.plantId)?.commonName ?? "Plant";
     case "ground": return GROUND[tool.kind].label;
+    case "overlay": return OVERLAYS[tool.sub]?.label ?? "Overlay";
   }
 }
 

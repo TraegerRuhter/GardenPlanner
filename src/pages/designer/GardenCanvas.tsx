@@ -8,15 +8,15 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
+import { Circle, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
 import type Konva from "konva";
-import type { Garden, Plant, PlantInstance } from "../../types/models";
+import type { FieldOverlay, Garden, OverlaySub, Plant, PlantInstance } from "../../types/models";
 import type { SunMap } from "../../engines/sunModel";
 import { tileKey } from "../../engines/sunModel";
 import { groundTypeAt } from "../../db/gardenRepo";
 import { produceFor, spriteFor } from "../../sprites/sprites";
 import { GROUND_NATIVE, paintField } from "../../sprites/ground";
-import { GRID_LINE, TILE_PX } from "./palette";
+import { GRID_LINE, OVERLAYS, TILE_PX } from "./palette";
 
 export interface CanvasProps {
   garden: Garden;
@@ -24,6 +24,7 @@ export interface CanvasProps {
   plantsById: Map<string, Plant>;
   sunMap: SunMap | null;
   selected: { col: number; row: number } | null;
+  pendingOverlay: { col: number; row: number; sub: OverlaySub } | null;
   fieldMode: boolean;
   onCellTap: (col: number, row: number) => void;
   height: number;
@@ -38,6 +39,7 @@ export function GardenCanvas({
   plantsById,
   sunMap,
   selected,
+  pendingOverlay,
   fieldMode,
   onCellTap,
   height,
@@ -146,6 +148,25 @@ export function GardenCanvas({
     }
   }
 
+  // overlays (sub-cell infrastructure): lines through cell centers, strips between
+  const cellCm = field.cellSizeCm;
+  const overlayNodes: React.ReactNode[] = [];
+  for (const o of field.overlays) {
+    const meta = OVERLAYS[o.sub];
+    const color = meta?.color ?? "#4f8fc4";
+    const pts = o.path.flatMap((p) => [p.x * TILE_PX, p.y * TILE_PX]);
+    if (o.kind === "strip") {
+      const wPx = ((o.widthCm ?? meta?.widthCm ?? 45) / cellCm) * TILE_PX;
+      overlayNodes.push(<Line key={`o${o.id}`} points={pts} stroke={color} strokeWidth={wPx} lineCap="round" lineJoin="round" opacity={0.92} listening={false} />);
+    } else {
+      overlayNodes.push(<Line key={`o${o.id}`} points={pts} stroke={color} strokeWidth={2.5} dash={o.sub === "soaker" ? [5, 4] : undefined} lineCap="round" listening={false} />);
+      if (o.sub === "drip") for (const e of emittersAlong(o)) overlayNodes.push(<Circle key={`e${o.id},${e.x.toFixed(1)},${e.y.toFixed(1)}`} x={e.x * TILE_PX} y={e.y * TILE_PX} radius={2.2} fill="#bfe0f5" listening={false} />);
+    }
+  }
+  const pendingMarker = pendingOverlay ? (
+    <Circle x={(pendingOverlay.col + 0.5) * TILE_PX} y={(pendingOverlay.row + 0.5) * TILE_PX} radius={TILE_PX * 0.32} stroke={OVERLAYS[pendingOverlay.sub]?.color ?? "#4f8fc4"} strokeWidth={2} dash={[4, 3]} listening={false} />
+  ) : null;
+
   return (
     <div ref={wrapRef} className="relative overflow-hidden rounded-xl border border-[var(--color-paper-deep)] bg-[#5f9f46]">
       <Stage
@@ -167,10 +188,12 @@ export function GardenCanvas({
           <KImage image={groundCanvas} x={0} y={0} width={fieldW} height={fieldH} />
           {sunRects}
           {gridLines}
+          {overlayNodes}
           {plantNodes}
           {selected && (
             <Rect x={selected.col * TILE_PX} y={selected.row * TILE_PX} width={TILE_PX} height={TILE_PX} stroke="#f3c14b" strokeWidth={2.5} listening={false} />
           )}
+          {pendingMarker}
         </Layer>
       </Stage>
 
@@ -190,6 +213,20 @@ export function GardenCanvas({
       </div>
     </div>
   );
+}
+
+/** Cell-center points along an overlay's segments (drip emitter spots). */
+function emittersAlong(o: FieldOverlay): Array<{ x: number; y: number }> {
+  const out: Array<{ x: number; y: number }> = [];
+  for (let i = 0; i + 1 < o.path.length; i++) {
+    const a = o.path[i], b = o.path[i + 1];
+    const steps = Math.max(1, Math.round(Math.hypot(b.x - a.x, b.y - a.y)));
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    }
+  }
+  return out;
 }
 
 const imageCache = new Map<string, HTMLImageElement>();

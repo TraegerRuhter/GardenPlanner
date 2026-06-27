@@ -7,6 +7,7 @@
 import type {
   GroundType,
   HardscapeKind,
+  OverlaySub,
   StructureKind,
   WaterFeatureKind,
 } from "../../types/models";
@@ -17,7 +18,20 @@ export type Tool =
   | { t: "elev_up" }
   | { t: "elev_down" }
   | { t: "plant"; plantId: string }
-  | { t: "ground"; kind: GroundType };
+  | { t: "ground"; kind: GroundType }
+  | { t: "overlay"; sub: OverlaySub };
+
+/**
+ * Sub-cell infrastructure. "line" overlays thread through cell centers (drip /
+ * soaker); "strip" overlays are wide runs between cells (walkways). Placed by
+ * clicking a start cell then an end cell.
+ */
+export const OVERLAYS: Partial<Record<OverlaySub, { label: string; kind: "line" | "strip"; color: string; widthCm?: number }>> = {
+  drip: { label: "Drip line", kind: "line", color: "#4f8fc4" },
+  soaker: { label: "Soaker hose", kind: "line", color: "#3a6f9e" },
+  walkway: { label: "Walkway", kind: "strip", color: "#bcb4a4", widthCm: 45 },
+};
+export const OVERLAY_ORDER: OverlaySub[] = ["drip", "soaker", "walkway"];
 
 /** Carve-able ground surfaces. "grass" restores the living default. */
 export const GROUND: Record<GroundType, { label: string; color: string; swatch: string }> = {

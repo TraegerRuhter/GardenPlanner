@@ -1,7 +1,7 @@
 /** §24 — flatten a garden field into accessible mirror rows (pure). */
 
 import type { Garden, Plant, PlantInstance } from "../../types/models";
-import { GROUND } from "./palette";
+import { GROUND, OVERLAYS } from "./palette";
 
 export interface MirrorRow {
   col: number;
@@ -44,6 +44,18 @@ export function mirrorRows(
         stage: inst.status === "planned" ? "—" : inst.currentStage,
       });
     }
+  }
+
+  // infrastructure overlays (listed at their start cell)
+  for (const o of garden.field.overlays) {
+    const a = o.path[0];
+    const b = o.path[o.path.length - 1];
+    rows.push({
+      col: Math.floor(a.x),
+      row: Math.floor(a.y),
+      kind: "infrastructure",
+      detail: `${OVERLAYS[o.sub]?.label ?? o.sub} → (${Math.floor(b.x)},${Math.floor(b.y)})`,
+    });
   }
 
   return rows.sort((a, b) => a.row - b.row || a.col - b.col);

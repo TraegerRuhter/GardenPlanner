@@ -11,10 +11,12 @@ import { db } from "./db";
 import { newId } from "../lib/ids";
 import { todayISO } from "../lib/dates";
 import type {
+  FieldOverlay,
   Garden,
   GardenField,
   GroundCell,
   GroundType,
+  OverlaySub,
   PlantInstance,
 } from "../types/models";
 
@@ -174,6 +176,57 @@ export function freeCells(
     for (let col = 0; col < field.cols; col++)
       if (!occupied.has(`${col},${row}`)) out.push({ col, row });
   return out;
+}
+
+// ---------------- overlay plane (sub-cell infrastructure) ----------------
+
+interface Pt { x: number; y: number }
+const cellCenter = (col: number, row: number): Pt => ({ x: col + 0.5, y: row + 0.5 });
+
+/** Distance from point p to segment ab, in cell units. */
+function distToSegment(p: Pt, a: Pt, b: Pt): number {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 === 0 ? 0 : ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+
+/** Add a straight overlay segment from one cell center to another. */
+export function addOverlaySegment(
+  field: GardenField,
+  sub: OverlaySub,
+  kind: FieldOverlay["kind"],
+  start: { col: number; row: number },
+  end: { col: number; row: number },
+  widthCm?: number,
+): FieldOverlay {
+  const overlay: FieldOverlay = {
+    id: newId(),
+    kind,
+    sub,
+    path: [cellCenter(start.col, start.row), cellCenter(end.col, end.row)],
+    ...(widthCm !== undefined ? { widthCm } : {}),
+  };
+  field.overlays.push(overlay);
+  return overlay;
+}
+
+/** Does an overlay run through (near the center of) a cell? */
+export function overlayPassesCell(o: FieldOverlay, col: number, row: number, tol = 0.55): boolean {
+  const c = cellCenter(col, row);
+  for (let i = 0; i + 1 < o.path.length; i++) {
+    if (distToSegment(c, o.path[i], o.path[i + 1]) <= tol) return true;
+  }
+  return false;
+}
+
+/** Remove the first overlay passing through a cell. Returns true if one went. */
+export function removeOverlayAt(field: GardenField, col: number, row: number): boolean {
+  const idx = field.overlays.findIndex((o) => overlayPassesCell(o, col, row));
+  if (idx < 0) return false;
+  field.overlays.splice(idx, 1);
+  return true;
 }
 
 export async function activeInstancesForGarden(gardenId: string): Promise<PlantInstance[]> {
