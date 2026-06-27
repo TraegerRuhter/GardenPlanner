@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StageKey } from "../types/models";
 import { SHAPE_LABELS, type SpriteShape } from "./shapes";
-import { buildSlotPalette, generateGrid, GRID_SIZE } from "./generate";
+import { buildSlotPalette, generateGrid, generateProduce, GRID_SIZE } from "./generate";
 
 const SHAPES = Object.keys(SHAPE_LABELS) as SpriteShape[];
 const STAGES: StageKey[] = [
@@ -57,5 +57,18 @@ describe("procedural sprite generator", () => {
 
   it("renders a bare woody stub when dormant", () => {
     expect(has(generateGrid("bush", "dormant"), "wl")).toBe(true);
+  });
+});
+
+describe("harvested-produce icons", () => {
+  it.each(SHAPES)("%s yields a 32×32 grid of known slots, outlined and non-empty", (shape) => {
+    const g = generateProduce(shape);
+    expect(g).toHaveLength(GRID_SIZE);
+    for (const row of g) {
+      expect(row).toHaveLength(GRID_SIZE);
+      for (const cell of row) if (cell) expect(SLOTS.has(cell)).toBe(true);
+    }
+    expect(filled(g)).toBeGreaterThan(20);
+    expect(has(g, "ol")).toBe(true); // unifying dark outline
   });
 });

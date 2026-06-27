@@ -423,6 +423,72 @@ const BUILDERS: Record<SpriteShape, (g: Grid, o: Produce) => void> = {
   },
 };
 
+// -- harvested-produce icons: a single centered "fruit only" item per archetype.
+// Recolor through the same slot palette as the plants (fruit f/F, leaf l/L, …),
+// so each crop's accent drives its produce color. No mound / no growth scaling.
+const PRODUCE_DRAW: Record<string, (g: Grid) => void> = {
+  roundfruit(g) { disc(g, 16, 18, 7, ["fh", "fm", "fl"], true); for (let y = 9; y < 12; y++) set(g, 16, y, "sm"); set(g, 18, 10, "lh"); set(g, 19, 9, "lm"); },
+  carrot(g) { for (let y = 9; y < 27; y++) { const w = Math.max(0, Math.round(5 - (y - 9) * 0.28)); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "rh" : x >= 2 ? "rl" : "rm"); } for (const ry of [12, 16, 20]) for (let x = -3; x <= 3; x += 2) set(g, 16 + x, ry, "rl"); foliage(g, [[16, 6, 2.3], [12, 7, 1.9], [20, 7, 1.9]], 16, 6); },
+  onion(g) { disc(g, 16, 18, 7, ["rh", "rm", "rl"], true); for (const dx of [-3, 0, 3]) for (let y = 12; y <= 24; y++) { if (dx * dx + (y - 18) * (y - 18) * 0.45 < 46) set(g, 16 + dx, y, "rl"); } for (const dx of [-2, 0, 2]) { set(g, 16 + dx, 10, "sm"); set(g, 16 + dx, 9, "sl"); } for (const dx of [-2, 0, 2]) set(g, 16 + dx, 26, "wl"); },
+  cucumber(g) { for (let i = 0; i < 18; i++) { const x = 8 + i, y = 22 - Math.round(i * 0.45); set(g, x, y, "fm"); set(g, x, y - 1, i > 0 && i < 17 ? "fh" : "fm"); set(g, x, y + 1, "fl"); } for (let i = 3; i < 15; i += 3) set(g, 8 + i, 21 - Math.round(i * 0.45), "fl"); },
+  pumpkin(g) { disc(g, 16, 19, 9, ["fh", "fm", "fl"], true); for (const dx of [-5, -2, 1, 4]) for (let y = -7; y <= 7; y++) if (dx * dx + y * y <= 81) set(g, 16 + dx, 19 + y, "fl"); set(g, 16, 9, "wl"); set(g, 17, 9, "wh"); set(g, 16, 10, "wl"); },
+  cabbage(g) { foliage(g, [[9, 21, 3.6], [23, 21, 3.6], [16, 24, 3.4]], 16, 22); disc(g, 16, 16, 9, ["lh", "lm", "ll"]); for (const off of [-6, -3, 0, 3, 6]) for (let dy = -8; dy <= 8; dy++) { const k = Math.sqrt(Math.max(0, 1 - (dy / 9) ** 2)); const x = 16 + Math.round(off * k), y = 16 + dy; if ((x - 16) ** 2 + (y - 16) ** 2 <= 80) set(g, x, y, "ld"); } set(g, 16, 26, "sl"); },
+  broccoli(g) { foliage(g, [[16, 13, 6], [11, 14, 3.5], [21, 14, 3.5], [13, 9, 3], [19, 9, 3], [16, 8, 3.5]], 16, 12); for (let i = 0; i < 24; i++) { const x = 10 + ((i * 7) % 14), y = 8 + ((i * 5) % 9); if ((x - 16) ** 2 + (y - 12) ** 2 < 36) set(g, x, y, "ld"); } for (let y = 18; y < 27; y++) for (let x = 14; x <= 18; x++) set(g, x, y, x < 16 ? "sh" : x < 17 ? "sm" : "sl"); },
+  corn(g) { for (let y = 8; y < 26; y++) for (let x = 13; x <= 20; x++) { const dx = (x - 16.5) / 4, dy = (y - 17) / 9; if (dx * dx + dy * dy <= 1) set(g, x, y, y % 2 === 0 ? "fh" : "fm"); } for (let y = 9; y < 25; y++) set(g, 20, y, "fl"); for (let y = 11; y < 27; y++) { set(g, 12, y, "ll"); set(g, 11, y + 1, "ld"); } set(g, 13, 7, "yh"); set(g, 15, 6, "yh"); },
+  peapod(g) { for (let i = 0; i < 17; i++) { const x = 8 + i, y = 18 + Math.round(Math.sin((i / 16) * Math.PI) * -5); set(g, x, y, "fm"); set(g, x, y - 1, "fh"); set(g, x, y + 1, "fl"); } for (let i = 2; i < 15; i += 3) { const x = 8 + i, y = 18 + Math.round(Math.sin((i / 16) * Math.PI) * -5); set(g, x, y, "fh"); set(g, x, y + 1, "fm"); } },
+  berries(g) { for (const [bx, by] of [[12, 14], [20, 14], [16, 12], [13, 20], [19, 20], [16, 22]]) disc(g, bx, by, 2.6, ["fh", "fm", "fl"], true); for (let y = 8; y < 12; y++) set(g, 16, y, "sm"); },
+  potato(g) { const cx = 16, cy = 17, L = [1, 3, 4, 5, 6, 6, 7, 7, 6, 5, 4, 2, 1], R = [2, 4, 6, 7, 7, 8, 8, 7, 7, 6, 4, 3, 1]; for (let i = 0; i < 13; i++) { const dy = i - 6; for (let x = -L[i]; x <= R[i]; x++) { const t = x + dy; set(g, cx + x, cy + dy, t <= -3 ? "rh" : t >= 4 ? "rl" : "rm"); } } for (const [ex, ey] of [[12, 14], [19, 13], [21, 18], [14, 21], [16, 17]]) { set(g, ex, ey, "rl"); set(g, ex, ey - 1, "kl"); } },
+  strawberry(g) { for (let y = 12; y < 27; y++) { const t = (y - 12) / 15, w = Math.round((1 - t) * 7 + 1); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "fh" : x >= 2 ? "fl" : "fm"); } for (const [sx, sy] of [[13, 16], [19, 16], [15, 19], [18, 20], [16, 22], [14, 23]]) set(g, sx, sy, "bm"); foliage(g, [[16, 10, 2.6], [13, 11, 1.8], [19, 11, 1.8]], 16, 10); set(g, 16, 8, "sm"); },
+  seedhead(g) { for (let a = 0; a < 12; a++) { const ang = (a / 12) * Math.PI * 2; set(g, 16 + Math.round(Math.cos(ang) * 9), 16 + Math.round(Math.sin(ang) * 9), "fh"); set(g, 16 + Math.round(Math.cos(ang) * 8), 16 + Math.round(Math.sin(ang) * 8), "fm"); } disc(g, 16, 16, 6, ["ym", "yl", "yl"]); for (let y = -5; y <= 5; y++) for (let x = -5; x <= 5; x++) if (x * x + y * y <= 26 && (x + y) % 2 === 0) set(g, 16 + x, 16 + y, "yh"); },
+  sprig(g) { for (let y = 9; y < 26; y++) set(g, 16, y, "sm"); for (const [lx, ly] of [[16, 9], [13, 12], [19, 12], [13, 16], [19, 16], [14, 20], [18, 20]]) foliage(g, [[lx, ly, 2.2]], lx, ly); },
+  bloom(g) { for (let y = 18; y < 27; y++) set(g, 16, y, "sm"); for (let a = 0; a < 8; a++) { const ang = (a / 8) * Math.PI * 2; disc(g, 16 + Math.round(Math.cos(ang) * 6), 14 + Math.round(Math.sin(ang) * 6), 3, ["fh", "fm", "fl"]); } disc(g, 16, 14, 3, ["fd", "fd", "fd"]); disc(g, 16, 14, 2, ["yh", "ym", "yl"]); },
+  grainhead(g) { for (let y = 15; y < 27; y++) set(g, 16, y, "sl"); for (let y = 5; y < 17; y++) { const t = (y - 5) / 12, w = Math.round(Math.sin(t * Math.PI) * 3); for (let x = -w; x <= w; x++) set(g, 16 + x, y, (x + y) % 2 === 0 ? "fh" : "fm"); } for (const dx of [-1, 0, 1]) set(g, 16 + dx, 4, "fl"); },
+  caneberry(g) { disc(g, 16, 16, 7, ["fh", "fm", "fl"]); for (let y = -6; y <= 6; y += 2) for (let x = -6; x <= 6; x += 2) if (x * x + y * y <= 42) set(g, 16 + x, 16 + y, "fl"); for (let y = 8; y < 11; y++) set(g, 16, y, "sm"); },
+  aloeleaf(g) { for (let y = 6; y < 27; y++) { const w = Math.max(0, Math.round((1 - (y - 6) / 21) * 4)); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x < 0 ? "lh" : x > 0 ? "ll" : "lm"); } for (let y = 10; y < 26; y += 3) { const w = Math.max(0, Math.round((1 - (y - 6) / 21) * 4)); set(g, 16 - w - 1, y, "ld"); set(g, 16 + w + 1, y, "ld"); } },
+  spear(g) { for (let y = 5; y < 27; y++) { const w = y < 10 ? 1 : 2; for (let x = -w; x <= w; x++) set(g, 16 + x, y, x < 0 ? "lh" : x > 0 ? "ll" : "lm"); } for (let y = 5; y < 11; y++) { set(g, 15, y, "ld"); set(g, 17, y, "ld"); } },
+  stalkbunch(g) { for (const dx of [-5, -2, 1, 4]) { for (let y = 8; y < 26; y++) { set(g, 16 + dx, y, "sh"); set(g, 16 + dx + 1, y, "sl"); } foliage(g, [[16 + dx, 7, 2]], 16 + dx, 7); } for (let x = 10; x < 23; x++) { set(g, x, 18, "ld"); set(g, x, 19, "ld"); } },
+  tuna(g) { for (let y = 8; y < 25; y++) { const t = (y - 8) / 17, w = Math.round(Math.sin(t * Math.PI) * 5 + 1); for (let x = -w; x <= w; x++) set(g, 16 + x, y, x <= -2 ? "fh" : x >= 2 ? "fl" : "fm"); } for (const [sx, sy] of [[13, 12], [19, 12], [16, 15], [14, 19], [18, 19], [16, 21]]) set(g, sx, sy, "bh"); },
+  sprout(g) { disc(g, 16, 16, 7, ["lh", "lm", "ll"]); for (const off of [-4, 0, 4]) for (let dy = -6; dy <= 6; dy++) { const k = Math.sqrt(Math.max(0, 1 - (dy / 7) ** 2)); const x = 16 + Math.round(off * k), y = 16 + dy; if ((x - 16) ** 2 + (y - 16) ** 2 <= 48) set(g, x, y, "ld"); } set(g, 13, 11, "lh"); set(g, 19, 11, "lh"); set(g, 16, 25, "sl"); set(g, 16, 24, "sm"); },
+  leafy(g) { foliage(g, [[10, 16, 5], [22, 16, 5], [13, 12, 4.5], [19, 12, 4.5], [16, 14, 6], [16, 20, 5]], 16, 16); disc(g, 16, 17, 3, ["lh", "lh", "lm"]); for (const [hx, hy] of [[11, 10], [16, 8], [21, 10], [13, 11], [19, 11]]) set(g, hx, hy, "lh"); for (let i = 0; i < 4; i++) set(g, 14 + i, 7 + (i % 2), "ld"); },
+};
+
+/** Which produce item each archetype yields (some shapes share an item). */
+const HARVEST: Record<SpriteShape, (g: Grid) => void> = {
+  bush: PRODUCE_DRAW.roundfruit,
+  root: PRODUCE_DRAW.carrot,
+  vine: PRODUCE_DRAW.cucumber,
+  tall: PRODUCE_DRAW.seedhead,
+  leafy: PRODUCE_DRAW.leafy,
+  herb: PRODUCE_DRAW.sprig,
+  flower: PRODUCE_DRAW.bloom,
+  bulb: PRODUCE_DRAW.onion,
+  climbing: PRODUCE_DRAW.peapod,
+  grass: PRODUCE_DRAW.grainhead,
+  cob: PRODUCE_DRAW.corn,
+  head: PRODUCE_DRAW.cabbage,
+  gourd: PRODUCE_DRAW.pumpkin,
+  crown: PRODUCE_DRAW.broccoli,
+  berry: PRODUCE_DRAW.berries,
+  tree: PRODUCE_DRAW.roundfruit,
+  cane: PRODUCE_DRAW.caneberry,
+  shrub: PRODUCE_DRAW.berries,
+  succulent: PRODUCE_DRAW.aloeleaf,
+  fern: PRODUCE_DRAW.spear,
+  tuber: PRODUCE_DRAW.potato,
+  stalk: PRODUCE_DRAW.stalkbunch,
+  cactus: PRODUCE_DRAW.tuna,
+  sprouts: PRODUCE_DRAW.sprout,
+  mat: PRODUCE_DRAW.strawberry,
+};
+
+/** Build the 32×32 slot grid for an archetype's harvested produce icon. */
+export function generateProduce(shape: SpriteShape): Grid {
+  const g = newGrid();
+  HARVEST[shape](g);
+  outline(g);
+  return g;
+}
+
 // shared young/late stages (archetype-independent)
 function seed(g: Grid) { mound(g); set(g, 15, 27, "ol"); set(g, 16, 27, "sl"); set(g, 16, 26, "sm"); }
 function sprout0(g: Grid) { mound(g); set(g, 16, 27, "sm"); set(g, 16, 26, "sm"); set(g, 16, 25, "lm"); set(g, 15, 25, "lh"); set(g, 17, 26, "ll"); }

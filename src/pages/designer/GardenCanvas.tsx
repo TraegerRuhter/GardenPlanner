@@ -11,7 +11,7 @@ import type Konva from "konva";
 import type { Garden, GardenArea, Plant, PlantInstance, Tile } from "../../types/models";
 import type { SunMap } from "../../engines/sunModel";
 import { tileKey } from "../../engines/sunModel";
-import { spriteFor } from "../../sprites/sprites";
+import { produceFor, spriteFor } from "../../sprites/sprites";
 import { GRID_LINE, HARDSCAPES, SOIL_BASE, STRUCTURES, TILE_PX, WATER } from "./palette";
 
 export interface CanvasProps {
@@ -214,6 +214,7 @@ function TileCell({
   let base = SOIL_BASE;
   let glyph: { text: string; color: string } | null = null;
   let sprite: string | null = null;
+  let produce: string | null = null;
   let ghost = false;
 
   if (content.type === "hardscape") {
@@ -230,6 +231,10 @@ function TileCell({
       // scale 2 → 32px native = TILE_PX, so the sprite blits 1:1 at zoom 1.
       sprite = spriteFor(plant.iconKey, plant.category, inst.status === "planned" ? "planted" : inst.currentStage, 2);
       ghost = inst.status === "planned";
+      // Harvest-ready marker: badge the tile with the crop's produce icon.
+      if (inst.status === "active" && inst.currentStage === "harvest") {
+        produce = produceFor(plant.iconKey, plant.category, 2);
+      }
     }
   }
 
@@ -252,6 +257,7 @@ function TileCell({
       <Rect width={TILE_PX} height={TILE_PX} fill={base} stroke={GRID_LINE} strokeWidth={1} />
       {elevShade && <Rect width={TILE_PX} height={TILE_PX} fill={elevShade.fill} opacity={elevShade.opacity} listening={false} />}
       {sprite && <SpriteNode url={sprite} ghost={ghost} />}
+      {produce && <ProduceBadge url={produce} />}
       {glyph && (
         <Text
           text={glyph.text}
@@ -289,4 +295,28 @@ function SpriteNode({ url, ghost }: { url: string; ghost: boolean }) {
   }, [url]);
   if (!img) return null;
   return <KImage image={img} width={TILE_PX} height={TILE_PX} opacity={ghost ? 0.55 : 1} listening={false} />;
+}
+
+/** Small corner badge marking a harvest-ready tile with its produce icon. */
+function ProduceBadge({ url }: { url: string }) {
+  const [, bump] = useState(0);
+  const img = imageCache.get(url) ?? null;
+  useEffect(() => {
+    if (imageCache.has(url)) return;
+    const el = new window.Image();
+    el.onload = () => {
+      imageCache.set(url, el);
+      bump((n) => n + 1); // async: re-render once decoded
+    };
+    el.src = url;
+  }, [url]);
+  if (!img) return null;
+  const S = 15;
+  const pad = 1;
+  return (
+    <Group x={TILE_PX - S - pad} y={pad} listening={false}>
+      <Rect width={S} height={S} cornerRadius={S / 2} fill="rgba(255,255,255,0.85)" stroke="#3a2a18" strokeWidth={1} />
+      <KImage image={img} x={1} y={1} width={S - 2} height={S - 2} />
+    </Group>
+  );
 }

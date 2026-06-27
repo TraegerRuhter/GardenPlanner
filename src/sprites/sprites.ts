@@ -9,7 +9,7 @@
 
 import type { PlantCategory, StageKey } from "../types/models";
 import type { SpriteShape } from "./shapes";
-import { buildSlotPalette, generateGrid, GRID_SIZE } from "./generate";
+import { buildSlotPalette, generateGrid, generateProduce, GRID_SIZE } from "./generate";
 
 interface Palette {
   m: string;
@@ -426,21 +426,14 @@ function paletteFor(iconKey: string, category: PlantCategory): Palette {
   return { ...base, ...accent, ...dynamic };
 }
 
-/** Render (and cache) the sprite for a plant at a stage as a data URL. */
-export function spriteFor(
-  iconKey: string,
-  category: PlantCategory,
-  stage: StageKey,
-  scale = 2,
+/** Paint a slot grid to a crisp data URL.
+ *  32px art. scale 2 → 1× (32px = TILE_PX, blits 1:1), scale 6 → 3× (96px).
+ *  Output dims equal the old 16px maps' (16×scale), so consumers are unchanged. */
+function renderToDataURL(
+  grid: (string | null)[][],
+  slots: Record<string, string>,
+  scale: number,
 ): string {
-  const key = `${iconKey}/${category}/${stage}/${scale}`;
-  const hit = cache.get(key);
-  if (hit) return hit;
-
-  const grid = generateGrid(getPlantShape(iconKey), stage);
-  const slots = buildSlotPalette(paletteFor(iconKey, category));
-  // 32px art. scale 2 → 1× (32px = TILE_PX, blits 1:1), scale 6 → 3× (96px).
-  // Output dims equal the old 16px maps' (16×scale), so consumers are unchanged.
   const px = Math.max(1, Math.round(scale / 2));
   const canvas = document.createElement("canvas");
   canvas.width = GRID_SIZE * px;
@@ -454,7 +447,42 @@ export function spriteFor(
       ctx.fillRect(x * px, y * px, px, px);
     }
   }
-  const url = canvas.toDataURL();
+  return canvas.toDataURL();
+}
+
+/** Render (and cache) the sprite for a plant at a stage as a data URL. */
+export function spriteFor(
+  iconKey: string,
+  category: PlantCategory,
+  stage: StageKey,
+  scale = 2,
+): string {
+  const key = `${iconKey}/${category}/${stage}/${scale}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const grid = generateGrid(getPlantShape(iconKey), stage);
+  const slots = buildSlotPalette(paletteFor(iconKey, category));
+  const url = renderToDataURL(grid, slots, scale);
+  cache.set(key, url);
+  return url;
+}
+
+/** Render (and cache) the harvested-produce icon for a plant as a data URL.
+ *  Stage-independent (the ripe yield only); recolors via the same palette as
+ *  the plant sprite. Keyed under the iconKey so accent/shape edits invalidate it. */
+export function produceFor(
+  iconKey: string,
+  category: PlantCategory,
+  scale = 2,
+): string {
+  const key = `${iconKey}/produce/${category}/${scale}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const grid = generateProduce(getPlantShape(iconKey));
+  const slots = buildSlotPalette(paletteFor(iconKey, category));
+  const url = renderToDataURL(grid, slots, scale);
   cache.set(key, url);
   return url;
 }

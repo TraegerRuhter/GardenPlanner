@@ -4,7 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../../db/db";
 import type { Difficulty, Plant, PlantCategory } from "../../types/models";
 import { useAppStore } from "../../store/appStore";
-import { SpriteImg } from "../../components/SpriteImg";
+import { ProduceImg } from "../../components/ProduceImg";
 import { PlantSearchModal } from "../../components/PlantSearchModal";
 import { Badge } from "../../components/Badge";
 import { badgeTone } from "../../components/badgeTone";
@@ -237,7 +237,7 @@ export function EncyclopediaPage() {
                   to={`/encyclopedia/${p.id}`}
                   className="card-hover flex h-full flex-col items-center gap-2 rounded-xl border border-[var(--color-paper-deep)] bg-white/50 p-3 text-center hover:border-[var(--color-canopy)] dark:bg-white/5"
                 >
-                  <SpriteImg plant={p} stage="harvest" size={64} />
+                  <ProduceImg plant={p} size={64} />
                   <span className="font-semibold leading-tight">{p.commonName}</span>
                   <span className="text-[10px] capitalize text-[var(--color-ink-soft)]">{p.category.replace("_", " ")}</span>
                   <span className="flex flex-wrap justify-center gap-1">
