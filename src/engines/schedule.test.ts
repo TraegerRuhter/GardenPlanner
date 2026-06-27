@@ -29,7 +29,7 @@ const tomato = plants.find((p) => p.id === "tomato")!;
 
 function inst(over: Partial<PlantInstance>): PlantInstance {
   return {
-    id: "i", gardenId: "g", areaId: "a", plantId: "radish",
+    id: "i", gardenId: "g", plantId: "radish",
     tiles: [{ col: 0, row: 0 }], plantingMethod: "direct_sow",
     plantedOn: "2026-05-01", currentStage: "planted",
     projectedStageDates: {}, events: [], status: "active",

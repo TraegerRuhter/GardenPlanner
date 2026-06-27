@@ -201,12 +201,11 @@ function SuccessionForm({
   gardens,
   plants,
 }: {
-  gardens: Array<{ id: string; name: string; areas: Array<{ id: string; name: string }> }>;
+  gardens: Array<{ id: string; name: string }>;
   plants: Array<{ id: string; commonName: string }>;
 }) {
   const [gardenId, setGardenId] = useState(gardens[0]?.id ?? "");
   const garden = gardens.find((g) => g.id === gardenId) ?? gardens[0];
-  const [areaId, setAreaId] = useState(garden?.areas[0]?.id ?? "");
   const [plantId, setPlantId] = useState(plants[0]?.id ?? "");
   const [start, setStart] = useState(todayISO());
   const [interval, setInterval] = useState(12);
@@ -220,7 +219,6 @@ function SuccessionForm({
       </p>
     );
   }
-  const area = garden.areas.find((a) => a.id === areaId) ?? garden.areas[0];
 
   return (
     <div className="rounded-xl border border-[var(--color-paper-deep)] bg-white/40 p-3 dark:bg-white/5">
@@ -233,18 +231,17 @@ function SuccessionForm({
         className="flex flex-wrap items-end gap-2 text-xs"
         onSubmit={(e) => {
           e.preventDefault();
-          void scheduleSuccession(garden.id, area.id, plantId, start, interval, count).then((r) =>
+          void scheduleSuccession(garden.id, plantId, start, interval, count).then((r) =>
             setResult(
               r.placed === r.requested
-                ? `Scheduled ${r.placed} sowings ✓ — see the grid ghosts and Tasks.`
-                : `Placed ${r.placed} of ${r.requested} (area ran out of free tiles).`,
+                ? `Scheduled ${r.placed} sowings ✓ — see the field ghosts and Tasks.`
+                : `Placed ${r.placed} of ${r.requested} (field ran out of free cells).`,
             ),
           );
         }}
       >
         <Sel label="Plant" value={plantId} onChange={setPlantId} options={plants.map((p) => [p.id, p.commonName])} />
-        <Sel label="Garden" value={garden.id} onChange={(v) => { setGardenId(v); setAreaId(gardens.find((g) => g.id === v)?.areas[0]?.id ?? ""); }} options={gardens.map((g) => [g.id, g.name])} />
-        <Sel label="Area" value={area.id} onChange={setAreaId} options={garden.areas.map((a) => [a.id, a.name])} />
+        <Sel label="Garden" value={garden.id} onChange={setGardenId} options={gardens.map((g) => [g.id, g.name])} />
         <label className="font-medium">Start
           <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="mt-1 block rounded-lg border border-[var(--color-paper-deep)] bg-white/60 px-2 py-1.5 dark:bg-black/20" />
         </label>

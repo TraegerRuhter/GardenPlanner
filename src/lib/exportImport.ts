@@ -105,13 +105,12 @@ export async function exportCsvs(): Promise<void> {
   const instById = new Map(instances.map((i) => [i.id, i]));
 
   const instancesCsv = csv([
-    ["id", "gardenName", "areaName", "plantId", "varietalId", "plantingMethod", "plantedOn", "currentStage", "status", "tileCount", "lat", "lon"],
+    ["id", "gardenName", "plantId", "varietalId", "plantingMethod", "plantedOn", "currentStage", "status", "tileCount", "lat", "lon"],
     ...instances.map((i) => {
       const g = gardenById.get(i.gardenId);
-      const area = g?.areas.find((a) => a.id === i.areaId);
       const loc = g ? locById.get(g.locationId) : undefined;
       return [
-        i.id, g?.name, area?.name, i.plantId, i.varietalId, i.plantingMethod,
+        i.id, g?.name, i.plantId, i.varietalId, i.plantingMethod,
         i.plantedOn, i.currentStage, i.status, i.tiles.length, loc?.lat, loc?.lon,
       ];
     }),

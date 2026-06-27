@@ -1,6 +1,6 @@
 /**
- * SunModel (§12.8, §27.5, §27.6): per-tile direct-sun hours from solar
- * geometry plus obstruction casting by structures, plants, and elevation.
+ * SunModel (§12.8, §27.5, §27.6): per-cell direct-sun hours from solar geometry
+ * plus obstruction casting by plants and elevation across the garden field.
  * An estimate — ignores diffuse light, weather, and terrain beyond the plot;
  * label it as such in the UI.
  *
@@ -8,7 +8,7 @@
  * 30-minute steps, averaged.
  */
 
-import type { GardenArea, PlantInstance } from "../types/models";
+import type { GardenField, GroundCell, PlantInstance } from "../types/models";
 
 const RAD = Math.PI / 180;
 
@@ -39,13 +39,18 @@ export function solarPosition(
   return { altitudeDeg: alt / RAD, azimuthDeg };
 }
 
-export interface SunMapOptions {
+/** A vertical sun-blocker at a cell (a plant or, later, a structure). */
+export interface Blocker {
+  col: number;
+  row: number;
+  heightCm: number;
+}
+
+export interface FieldSunOptions {
   latDeg: number;
   northBearingDeg: number; // garden orientation (§7.9)
   sampleDays?: number[]; // day-of-year samples; default solstice+equinox
   stepMinutes?: number;
-  /** resolve a placed plant's blocking height (cm) */
-  plantHeightCm?: (instanceId: string) => number;
   maxReachTiles?: number;
 }
 
@@ -55,49 +60,43 @@ export function tileKey(col: number, row: number): string {
   return `${col},${row}`;
 }
 
-/** §27.6 — per-tile lit hours averaged over the sample days. */
-export function sunMapForArea(area: GardenArea, opts: SunMapOptions): SunMap {
+type FieldGeom = Pick<GardenField, "cols" | "rows" | "cellSizeCm"> & { ground: GroundCell[] };
+
+/** §27.6 — per-cell lit hours over the field, averaged across the sample days. */
+export function sunMapForField(
+  field: FieldGeom,
+  blockers: Blocker[],
+  opts: FieldSunOptions,
+): SunMap {
   const {
     latDeg,
     northBearingDeg,
     sampleDays = [172, 79], // Jun 21, Mar 20
     stepMinutes = 30,
-    plantHeightCm = () => 60,
     maxReachTiles = 24,
   } = opts;
 
-  const cell = area.grid.cellSizeCm;
-
-  // index blockers once: key → {topCm: height+elev}
+  const cell = field.cellSizeCm;
   const elev = new Map<string, number>();
+  for (const g of field.ground) elev.set(tileKey(g.col, g.row), g.elevationCm);
   const blockerH = new Map<string, number>();
-  for (const t of area.tiles) {
-    elev.set(tileKey(t.col, t.row), t.elevationCm);
-    if (t.content.type === "structure") {
-      blockerH.set(tileKey(t.col, t.row), t.content.heightCm);
-    } else if (t.content.type === "plant") {
-      blockerH.set(tileKey(t.col, t.row), plantHeightCm(t.content.instanceId));
-    }
-  }
+  for (const b of blockers) blockerH.set(tileKey(b.col, b.row), b.heightCm);
 
   const map: SunMap = new Map();
   const stepsPerHour = 60 / stepMinutes;
 
-  for (let col = 0; col < area.grid.cols; col++) {
-    for (let row = 0; row < area.grid.rows; row++) {
+  for (let col = 0; col < field.cols; col++) {
+    for (let row = 0; row < field.rows; row++) {
       let litSteps = 0;
-      let totalDaySteps = 0;
       for (const doy of sampleDays) {
         for (let h = 4; h <= 21; h += stepMinutes / 60) {
           const sun = solarPosition(latDeg, doy, h);
           if (sun.altitudeDeg <= 0) continue;
-          totalDaySteps++;
-          if (!blocked(col, row, sun, area, elev, blockerH, cell, northBearingDeg, maxReachTiles)) {
+          if (!blocked(col, row, sun, field, elev, blockerH, cell, northBearingDeg, maxReachTiles)) {
             litSteps++;
           }
         }
       }
-      void totalDaySteps;
       map.set(tileKey(col, row), litSteps / stepsPerHour / sampleDays.length);
     }
   }
@@ -108,7 +107,7 @@ function blocked(
   col: number,
   row: number,
   sun: SolarPosition,
-  area: GardenArea,
+  field: FieldGeom,
   elev: Map<string, number>,
   blockerH: Map<string, number>,
   cellCm: number,
@@ -117,8 +116,9 @@ function blocked(
 ): boolean {
   if (blockerH.size === 0) return false;
   // direction toward the sun in grid space: screen-up corresponds to
-  // northBearingDeg; area may be rotated further (§7.9).
-  const theta = (sun.azimuthDeg - northBearingDeg - area.rotationDeg) * RAD;
+  // northBearingDeg (the field is not independently rotated — the view is
+  // straight-on, orientation is a data property).
+  const theta = (sun.azimuthDeg - northBearingDeg) * RAD;
   const dx = Math.sin(theta); // +col toward screen-right
   const dy = -Math.cos(theta); // +row toward screen-down
   const tanAlt = Math.tan(sun.altitudeDeg * RAD);
@@ -127,7 +127,7 @@ function blocked(
   for (let t = 1; t <= maxReach; t++) {
     const c = Math.round(col + dx * t);
     const r = Math.round(row + dy * t);
-    if (c < 0 || r < 0 || c >= area.grid.cols || r >= area.grid.rows) return false;
+    if (c < 0 || r < 0 || c >= field.cols || r >= field.rows) return false;
     const h = blockerH.get(tileKey(c, r));
     if (h === undefined) continue;
     const distCm = Math.hypot(c - col, r - row) * cellCm;
@@ -138,14 +138,15 @@ function blocked(
   return false;
 }
 
-/** Convenience: build the plant-height resolver from instances + heights. */
-export function plantHeightResolver(
+/** Build sun-blockers from placed plants and their mature heights. */
+export function blockersFromInstances(
   instances: PlantInstance[],
   heightByPlantId: Map<string, number>,
-): (instanceId: string) => number {
-  const byInstance = new Map<string, number>();
-  for (const i of instances) {
-    byInstance.set(i.id, heightByPlantId.get(i.plantId) ?? 60);
+): Blocker[] {
+  const out: Blocker[] = [];
+  for (const inst of instances) {
+    const h = heightByPlantId.get(inst.plantId) ?? 60;
+    for (const t of inst.tiles) out.push({ col: t.col, row: t.row, heightCm: h });
   }
-  return (id) => byInstance.get(id) ?? 60;
+  return out;
 }

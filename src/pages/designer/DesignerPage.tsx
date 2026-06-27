@@ -15,23 +15,27 @@ import type {
   ClimateProfile,
   CompanionRelationship,
   Garden,
-  GardenArea,
+  GardenField,
+  GroundType,
   Location,
   Plant,
   PlantInstance,
+  SoilDrainage,
 } from "../../types/models";
 import {
   activeInstancesForGarden,
-  clearTile,
+  clearPlantAt,
   createGarden,
-  newArea,
+  elevationAt,
+  groundTypeAt,
   placePlant,
+  plantOccupant,
   saveGarden,
-  setTile,
-  tileAt,
+  setElevation,
+  setGround,
 } from "../../db/gardenRepo";
-import { validatePlacement, type PlacementWarning } from "../../engines/placement";
-import { plantHeightResolver, sunMapForArea, tileKey, type SunMap } from "../../engines/sunModel";
+import { validatePlacement, type PlacementField, type PlacementWarning } from "../../engines/placement";
+import { blockersFromInstances, sunMapForField, tileKey, type SunMap } from "../../engines/sunModel";
 import { getActiveClimate } from "../../db/climateRepo";
 import { activateInstance } from "../../db/instancesRepo";
 import { todayISO } from "../../lib/dates";
@@ -39,7 +43,7 @@ import { GardenCanvas } from "./GardenCanvas";
 import { CanvasToolbar, DesignerPalette } from "./DesignerPalette";
 import { MirrorTable } from "./MirrorTable";
 import { mirrorRows } from "./mirrorRows";
-import { HARDSCAPES, STRUCTURES, TILE_PX, WATER, type Tool } from "./palette";
+import { GROUND, type Tool } from "./palette";
 
 export default function DesignerPage() {
   const activeGardenId = useAppStore((s) => s.activeGardenId);
@@ -129,31 +133,32 @@ function DesignerBody({
     }
     return { t: "select" };
   });
-  const [selected, setSelected] = useState<{ areaId: string; col: number; row: number } | null>(null);
+  const [selected, setSelected] = useState<{ col: number; row: number } | null>(null);
   const [warnings, setWarnings] = useState<PlacementWarning[]>([]);
   const [sunOverlay, setSunOverlay] = useState(false);
   const [showMirror, setShowMirror] = useState(false);
+  // Field mode = the stark, gridded editing view; off = lively preview (§ user).
+  const [fieldMode, setFieldMode] = useState(true);
 
   const plantsById = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
   const latDeg = climate?.location.lat ?? 45;
 
-  // §12.8: recompute per-area sun maps on layout change; only while shown.
-  const sunMaps = useMemo(() => {
+  const placementField = (g: Garden): PlacementField => ({
+    cols: g.field.cols,
+    rows: g.field.rows,
+    cellSizeCm: g.field.cellSizeCm,
+    elevationAt: (c, r) => elevationAt(g.field, c, r),
+  });
+
+  // §12.8: recompute the field-wide sun map on layout change; only while shown.
+  const sunMap = useMemo<SunMap | null>(() => {
     if (!sunOverlay) return null;
     const heights = new Map(plants.map((p) => [p.id, p.matureHeightCm.max]));
-    const resolver = plantHeightResolver(instances, heights);
-    const maps = new Map<string, SunMap>();
-    for (const area of garden.areas) {
-      maps.set(
-        area.id,
-        sunMapForArea(area, {
-          latDeg,
-          northBearingDeg: garden.northBearingDeg,
-          plantHeightCm: resolver,
-        }),
-      );
-    }
-    return maps;
+    const blockers = blockersFromInstances(instances, heights);
+    return sunMapForField(garden.field, blockers, {
+      latDeg,
+      northBearingDeg: garden.northBearingDeg,
+    });
   }, [garden, instances, plants, sunOverlay, latDeg]);
 
   function toast(w: PlacementWarning[]) {
@@ -161,76 +166,52 @@ function DesignerBody({
     if (w.length) window.setTimeout(() => setWarnings([]), 7000);
   }
 
-  async function eraseAt(areaId: string, col: number, row: number) {
-    const g = structuredClone(garden);
-    const area = g.areas.find((a) => a.id === areaId);
-    if (!area) return;
-    await clearTile(g, area, col, row);
+  async function eraseAt(col: number, row: number) {
+    const removed = await clearPlantAt(col, row, instances);
+    if (!removed) await mutateGarden((g) => setGround(g.field, col, row, "grass"));
     setSelected(null);
   }
 
-  async function applyToolAt(areaId: string, col: number, row: number) {
-    const g = structuredClone(garden);
-    const area = g.areas.find((a) => a.id === areaId);
-    if (!area) return;
-
+  async function applyToolAtCell(col: number, row: number) {
     switch (tool.t) {
       case "select":
-        setSelected({ areaId, col, row });
+        setSelected({ col, row });
         return;
       case "erase":
-        await eraseAt(areaId, col, row);
+        await eraseAt(col, row);
         return;
       case "elev_up":
       case "elev_down": {
-        const t = tileAt(area, col, row);
-        const next = (t?.elevationCm ?? 0) + (tool.t === "elev_up" ? 5 : -5);
-        setTile(area, col, row, t?.content ?? { type: "empty" }, next);
-        await saveGarden(g);
+        const next = elevationAt(garden.field, col, row) + (tool.t === "elev_up" ? 5 : -5);
+        await mutateGarden((g) => setElevation(g.field, col, row, next));
         return;
       }
-      case "structure": {
-        setTile(area, col, row, {
-          type: "structure",
-          structure: tool.kind,
-          heightCm: STRUCTURES[tool.kind].heightCm,
-        });
-        await saveGarden(g);
-        return;
-      }
-      case "hardscape": {
-        setTile(area, col, row, { type: "hardscape", hardscape: tool.kind });
-        await saveGarden(g);
-        return;
-      }
-      case "water": {
-        setTile(area, col, row, { type: "water", water: tool.kind });
-        await saveGarden(g);
+      case "ground": {
+        await mutateGarden((g) => setGround(g.field, col, row, tool.kind));
         return;
       }
       case "plant": {
         const plant = plantsById.get(tool.plantId);
         if (!plant) return;
-        const occupied = tileAt(area, col, row);
-        if (occupied && occupied.content.type !== "empty") {
-          toast([{ kind: "spacing", severity: "warn", message: "Tile is occupied — erase it first." }]);
+        if (plantOccupant(instances, col, row)) {
+          toast([{ kind: "spacing", severity: "warn", message: "A plant is already here — erase it first." }]);
           return;
         }
-        const history = await db.instances.where("gardenId").equals(g.id).toArray();
+        const history = await db.instances.where("gardenId").equals(garden.id).toArray();
         const target = [{ col, row }];
         const w = validatePlacement({
-          area,
+          field: placementField(garden),
           target,
           plant,
           instances,
           history,
           plantsById,
           companions,
-          sunHours: sunMaps?.get(areaId)?.get(tileKey(col, row)),
+          sunHours: sunMap?.get(tileKey(col, row)),
         });
-        await placePlant(g, area, plant.id, target);
+        await placePlant(garden, plant.id, target);
         toast(w);
-        setSelected({ areaId, col, row });
+        setSelected({ col, row });
         return;
       }
     }
@@ -242,8 +223,9 @@ function DesignerBody({
     await saveGarden(g);
   }
 
-  const selectedArea = selected ? garden.areas.find((a) => a.id === selected.areaId) : undefined;
-  const selectedTile = selected && selectedArea ? tileAt(selectedArea, selected.col, selected.row) : undefined;
+  const selectedGround = selected ? groundTypeAt(garden.field, selected.col, selected.row) : undefined;
+  const selectedElev = selected ? elevationAt(garden.field, selected.col, selected.row) : 0;
+  const selectedPlant = selected ? plantOccupant(instances, selected.col, selected.row) : undefined;
 
   return (
     <section className="mx-auto max-w-6xl px-3 py-4">
@@ -293,6 +275,15 @@ function DesignerBody({
         </button>
         <button
           type="button"
+          aria-pressed={!fieldMode}
+          onClick={() => setFieldMode((v) => !v)}
+          className={`rounded-lg px-2 py-1 text-xs font-medium ${!fieldMode ? "bg-[var(--color-leaf)] text-white" : "bg-[var(--color-paper-deep)]"}`}
+          title={fieldMode ? "Editing the field (grid shown). Click to preview it living." : "Preview mode (flora, no grid). Click to edit."}
+        >
+          {fieldMode ? "🌿 Preview" : "✏️ Edit Field"}
+        </button>
+        <button
+          type="button"
           aria-pressed={showMirror}
           onClick={() => setShowMirror((v) => !v)}
           className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${showMirror ? "bg-[var(--color-canopy)] text-white" : "bg-[var(--color-paper-deep)]"}`}
@@ -312,15 +303,10 @@ function DesignerBody({
             garden={garden}
             instances={instances}
             plantsById={plantsById}
-            sunMaps={sunMaps}
+            sunMap={sunMap}
             selected={selected}
-            onTileTap={(a, c, r) => void applyToolAt(a, c, r)}
-            onAreaMove={(areaId, x, y) =>
-              void mutateGarden((g) => {
-                const a = g.areas.find((ar) => ar.id === areaId);
-                if (a) a.origin = { x: Math.round(x), y: Math.round(y) };
-              })
-            }
+            fieldMode={fieldMode}
+            onCellTap={(c, r) => void applyToolAtCell(c, r)}
             height={460}
           />
 
@@ -338,45 +324,25 @@ function DesignerBody({
             </div>
           )}
 
-          {/* area management */}
-          <div className="mt-3 flex flex-wrap items-end gap-2">
-            {garden.areas.map((a) => (
-              <AreaConfig key={a.id} area={a} onChange={(patch) =>
-                void mutateGarden((g) => {
-                  const target = g.areas.find((x) => x.id === a.id);
-                  if (target) Object.assign(target, patch);
-                })
-              } onRemove={garden.areas.length > 1 ? () =>
-                void mutateGarden((g) => {
-                  g.areas = g.areas.filter((x) => x.id !== a.id);
-                }) : undefined}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={() =>
-                void mutateGarden((g) => {
-                  const maxX = Math.max(...g.areas.map((a) => a.origin.x + a.grid.cols * TILE_PX));
-                  g.areas.push(newArea(`Bed ${String.fromCharCode(65 + g.areas.length)}`, 4, 4, { x: maxX + 60, y: 0 }));
-                })
-              }
-              className="h-9 rounded-lg bg-[var(--color-paper-deep)] px-3 text-sm font-medium"
-            >
-              + Add Bed
-            </button>
-          </div>
+          {/* field settings */}
+          <FieldConfig
+            cols={garden.field.cols}
+            rows={garden.field.rows}
+            soilDrainage={garden.field.soilDrainage}
+            onChange={(patch) => void mutateGarden((g) => Object.assign(g.field, patch))}
+          />
 
           {/* inspector */}
-          {selected && selectedArea && (
+          {selected && (
             <Inspector
-              areaName={selectedArea.name}
               col={selected.col}
               row={selected.row}
-              tile={selectedTile}
-              instances={instances}
+              groundType={selectedGround ?? "grass"}
+              elevationCm={selectedElev}
+              plant={selectedPlant}
               plantsById={plantsById}
               onActivate={(instanceId, date) => void activateInstance(instanceId, date)}
-              onRemove={() => void eraseAt(selected.areaId, selected.col, selected.row)}
+              onRemove={() => void eraseAt(selected.col, selected.row)}
             />
           )}
 
@@ -385,8 +351,8 @@ function DesignerBody({
               garden={garden}
               rows={mirrorRows(garden, instances, plantsById)}
               toolLabel={toolLabel(tool, plantsById)}
-              onApplyAt={(a, c, r) => void applyToolAt(a, c, r)}
-              onRemoveAt={(a, c, r) => void eraseAt(a, c, r)}
+              onApplyAt={(c, r) => void applyToolAtCell(c, r)}
+              onRemoveAt={(c, r) => void eraseAt(c, r)}
             />
           )}
         </div>
@@ -402,105 +368,85 @@ function toolLabel(tool: Tool, plantsById: Map<string, { commonName: string }>):
     case "elev_up": return "Raise +5cm";
     case "elev_down": return "Lower −5cm";
     case "plant": return plantsById.get(tool.plantId)?.commonName ?? "Plant";
-    case "structure": return STRUCTURES[tool.kind].label;
-    case "hardscape": return HARDSCAPES[tool.kind].label;
-    case "water": return WATER[tool.kind].label;
+    case "ground": return GROUND[tool.kind].label;
   }
 }
 
-function AreaConfig({
-  area,
+function FieldConfig({
+  cols,
+  rows,
+  soilDrainage,
   onChange,
-  onRemove,
 }: {
-  area: GardenArea;
-  onChange: (patch: Partial<GardenArea>) => void;
-  onRemove?: () => void;
+  cols: number;
+  rows: number;
+  soilDrainage: SoilDrainage;
+  onChange: (patch: Partial<Pick<GardenField, "cols" | "rows" | "soilDrainage">>) => void;
 }) {
   return (
-    <details className="rounded-lg border border-[var(--color-paper-deep)] bg-white/40 p-2 text-xs dark:bg-white/5">
-      <summary className="cursor-pointer font-medium">{area.name} · {area.grid.cols}×{area.grid.rows}</summary>
+    <details className="mt-3 rounded-lg border border-[var(--color-paper-deep)] bg-white/40 p-2 text-xs dark:bg-white/5">
+      <summary className="cursor-pointer font-medium">Field · {cols}×{rows} cells</summary>
       <div className="mt-2 flex flex-wrap items-end gap-2">
-        <label>Name
-          <input value={area.name} onChange={(e) => onChange({ name: e.target.value })} className="mt-1 block w-28 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
+        <label>Width (cells)
+          <input type="number" min={1} max={64} value={cols} onChange={(e) => onChange({ cols: clampInt(e.target.value, 1, 64) })} className="mt-1 block w-20 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
         </label>
-        <label>Cols
-          <input type="number" min={1} max={64} value={area.grid.cols} onChange={(e) => onChange({ grid: { ...area.grid, cols: clampInt(e.target.value, 1, 64) } })} className="mt-1 block w-16 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
-        </label>
-        <label>Rows
-          <input type="number" min={1} max={64} value={area.grid.rows} onChange={(e) => onChange({ grid: { ...area.grid, rows: clampInt(e.target.value, 1, 64) } })} className="mt-1 block w-16 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
+        <label>Height (cells)
+          <input type="number" min={1} max={64} value={rows} onChange={(e) => onChange({ rows: clampInt(e.target.value, 1, 64) })} className="mt-1 block w-20 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
         </label>
         <label>Soil Drainage
-          <select value={area.soilDrainage} onChange={(e) => onChange({ soilDrainage: e.target.value as GardenArea["soilDrainage"] })} className="mt-1 block rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20">
+          <select value={soilDrainage} onChange={(e) => onChange({ soilDrainage: e.target.value as SoilDrainage })} className="mt-1 block rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20">
             <option value="fast">Fast</option>
             <option value="moderate">Moderate</option>
             <option value="poor">Poor</option>
           </select>
         </label>
-        <label>Rotation°
-          <div className="mt-1 flex items-center gap-1">
-            <input type="number" value={area.rotationDeg} onChange={(e) => { const v = Number(e.target.value) || 0; onChange({ rotationDeg: v }); }} className="block w-16 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
-            {area.rotationDeg !== 0 && (
-              <button type="button" onClick={() => onChange({ rotationDeg: 0 })} title="Reset rotation" className="rounded bg-[var(--color-paper-deep)] px-1.5 py-1 text-[10px] font-medium">↺</button>
-            )}
-          </div>
-        </label>
-        {onRemove && (
-          <button type="button" onClick={onRemove} className="rounded bg-[var(--color-warn)]/15 px-2 py-1 font-medium text-[var(--color-warn)]">
-            Delete area
-          </button>
-        )}
       </div>
     </details>
   );
 }
 
 function Inspector({
-  areaName,
   col,
   row,
-  tile,
-  instances,
+  groundType,
+  elevationCm,
+  plant,
   plantsById,
   onActivate,
   onRemove,
 }: {
-  areaName: string;
   col: number;
   row: number;
-  tile: ReturnType<typeof tileAt>;
-  instances: PlantInstance[];
+  groundType: GroundType;
+  elevationCm: number;
+  plant: PlantInstance | undefined;
   plantsById: Map<string, Plant>;
   onActivate: (instanceId: string, date: string) => void;
   onRemove: () => void;
 }) {
   const [date, setDate] = useState(todayISO());
-  const content = tile?.content;
-  const inst = content?.type === "plant" ? instances.find((i) => i.id === content.instanceId) : undefined;
-  const plantName = inst ? plantsById.get(inst.plantId)?.commonName : undefined;
+  const plantName = plant ? plantsById.get(plant.plantId)?.commonName : undefined;
 
   return (
     <div className="mt-3 rounded-xl border border-[var(--color-paper-deep)] bg-white/40 p-3 text-sm dark:bg-white/5">
       <p className="font-semibold">
-        {areaName} · tile ({col}, {row})
-        {tile?.elevationCm ? ` · elevation ${tile.elevationCm > 0 ? "+" : ""}${tile.elevationCm} cm` : ""}
+        Cell ({col}, {row}) · <span className="capitalize">{groundType}</span>
+        {elevationCm ? ` · elevation ${elevationCm > 0 ? "+" : ""}${elevationCm} cm` : ""}
       </p>
-      {!content || content.type === "empty" ? (
-        <p className="text-[var(--color-ink-soft)]">Empty tile — select a tool from the palette to place something here.</p>
-      ) : content.type === "plant" && inst ? (
+      {plant ? (
         <div className="mt-1 space-y-2">
           <p>
             <span className="font-medium">{plantName}</span>{" — "}
-            {inst.status === "planned" ? (
+            {plant.status === "planned" ? (
               <span className="text-[var(--color-warn)]">Planned (not yet planted)</span>
             ) : (
-              <span className="capitalize">Status: {inst.status} · Stage: {inst.currentStage} · Planted {inst.plantedOn}</span>
+              <span className="capitalize">Status: {plant.status} · Stage: {plant.currentStage} · Planted {plant.plantedOn}</span>
             )}
           </p>
-          {inst.status === "planned" && (
+          {plant.status === "planned" && (
             <div className="flex flex-wrap items-center gap-2">
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-lg border border-[var(--color-paper-deep)] bg-white/60 px-2 py-1 text-xs dark:bg-black/20" />
-              <button type="button" onClick={() => onActivate(inst.id, date)} className="rounded-lg bg-[var(--color-canopy)] px-3 py-1 text-xs font-medium text-white">
+              <button type="button" onClick={() => onActivate(plant.id, date)} className="rounded-lg bg-[var(--color-canopy)] px-3 py-1 text-xs font-medium text-white">
                 🌱 Log planting
               </button>
             </div>
@@ -510,12 +456,11 @@ function Inspector({
           </button>
         </div>
       ) : (
-        <div className="mt-1 flex items-center gap-3">
-          <p className="capitalize">{content.type}</p>
-          <button type="button" onClick={onRemove} className="rounded-lg bg-[var(--color-warn)]/15 px-3 py-1 text-xs font-medium text-[var(--color-warn)]">
-            Remove
-          </button>
-        </div>
+        <p className="text-[var(--color-ink-soft)]">
+          {groundType === "grass"
+            ? "Grass — carve ground or place a plant from the palette."
+            : "Carved ground — place a plant, or erase to restore grass."}
+        </p>
       )}
     </div>
   );
@@ -528,10 +473,10 @@ function NewGardenForm({ onCreate }: { onCreate: (name: string) => Promise<void>
       <div className="rounded-xl border border-[var(--color-paper-deep)] bg-white/30 p-4 dark:bg-white/5">
         <p className="font-medium text-[var(--color-ink)]">What you can do:</p>
         <ul className="mt-1.5 space-y-0.5 text-sm text-[var(--color-ink-soft)]">
-          <li>🌱 Place plants on a tile grid (each tile = 1 sq ft)</li>
-          <li>🏗️ Add trellises, fences, paths, and water lines</li>
-          <li>☀ View estimated sun exposure per tile</li>
-          <li>📐 Adjust elevation and rotation per bed</li>
+          <li>🌿 Start from an expanse of grass and carve your garden into it</li>
+          <li>🟫 Brush in soil beds, paths, and mulch (each cell = 1 sq ft)</li>
+          <li>🌱 Plant onto the field; 🧭 set north so the sun estimate is right</li>
+          <li>☀ View estimated sun exposure · 📐 raise/lower cells</li>
         </ul>
       </div>
       <div className="flex gap-2">
