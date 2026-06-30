@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addOverlaySegment, newField, overlayPassesCell, removeOverlayAt } from "./gardenRepo";
+import { addOverlaySegment, newField, overlayPassesCell, pruneFieldToBounds, removeOverlayAt, setGround } from "./gardenRepo";
 
 describe("field overlays (sub-cell infrastructure)", () => {
   it("a drip line passes through the cells along its run, not off to the side", () => {
@@ -18,6 +18,17 @@ describe("field overlays (sub-cell infrastructure)", () => {
     const o = addOverlaySegment(f, "drip", "line", { col: 0, row: 2 }, { col: 9, row: 2 });
     // the overlay lives on the field; placing a plant at (4,2) is unaffected
     expect(overlayPassesCell(o, 4, 2)).toBe(true);
+  });
+
+  it("pruneFieldToBounds drops ground and overlays outside the field", () => {
+    const f = newField(6, 5);
+    setGround(f, 2, 2, "soil"); // in bounds
+    setGround(f, 7, 1, "soil"); // col 7 ≥ 6 → off-grid
+    addOverlaySegment(f, "drip", "line", { col: 1, row: 1 }, { col: 4, row: 1 }); // inside
+    addOverlaySegment(f, "drip", "line", { col: 1, row: 1 }, { col: 9, row: 1 }); // ends off-grid
+    pruneFieldToBounds(f);
+    expect(f.ground.map((g) => `${g.col},${g.row}`)).toEqual(["2,2"]);
+    expect(f.overlays).toHaveLength(1);
   });
 
   it("removeOverlayAt removes an overlay the cell lies on", () => {
