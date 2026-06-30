@@ -99,6 +99,18 @@ export function setGround(
   }
 }
 
+/** Drop carved ground and overlays that fall outside the field's bounds — used
+ *  after the field is shrunk so off-canvas data doesn't linger. (Plant instances
+ *  live in their own store; the caller trims those separately.) */
+export function pruneFieldToBounds(field: GardenField): void {
+  field.ground = field.ground.filter(
+    (g) => g.col >= 0 && g.row >= 0 && g.col < field.cols && g.row < field.rows,
+  );
+  field.overlays = field.overlays.filter((o) =>
+    o.path.every((p) => p.x >= 0 && p.x <= field.cols && p.y >= 0 && p.y <= field.rows),
+  );
+}
+
 /** Adjust a cell's elevation, preserving its ground type (defaults to grass). */
 export function setElevation(
   field: GardenField,

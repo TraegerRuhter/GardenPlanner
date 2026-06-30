@@ -15,7 +15,6 @@ import type {
   ClimateProfile,
   CompanionRelationship,
   Garden,
-  GardenField,
   GroundType,
   Location,
   OverlaySub,
@@ -32,6 +31,7 @@ import {
   groundTypeAt,
   placePlant,
   plantOccupant,
+  pruneFieldToBounds,
   removeOverlayAt,
   saveGarden,
   setElevation,
@@ -251,6 +251,62 @@ function DesignerBody({
     await saveGarden(g);
   }
 
+  // Brushing: ground / elevation / erase paint on drag (one batched write per
+  // stroke, so rapid cells don't race the live-query snapshot).
+  const paintMode = tool.t === "ground" || tool.t === "erase" || tool.t === "elev_up" || tool.t === "elev_down";
+  const paintColor = tool.t === "ground" ? GROUND[tool.kind].color : tool.t === "erase" ? "#d65a5a" : "#f3c14b";
+
+  async function paintCells(cells: Array<{ col: number; row: number }>) {
+    if (!cells.length) return;
+    if (tool.t === "ground") {
+      await mutateGarden((g) => { for (const c of cells) setGround(g.field, c.col, c.row, tool.kind); });
+    } else if (tool.t === "elev_up" || tool.t === "elev_down") {
+      const d = tool.t === "elev_up" ? 5 : -5;
+      await mutateGarden((g) => { for (const c of cells) setElevation(g.field, c.col, c.row, elevationAt(g.field, c.col, c.row) + d); });
+    } else if (tool.t === "erase") {
+      await eraseCells(cells);
+    }
+  }
+
+  // Erase a stroke of cells, top-thing-first per cell: plant → overlay → ground.
+  async function eraseCells(cells: Array<{ col: number; row: number }>) {
+    const plantKeys = new Set<string>();
+    for (const c of cells) if (plantOccupant(instances, c.col, c.row)) plantKeys.add(`${c.col},${c.row}`);
+    if (plantKeys.size) {
+      const affected = instances.filter((i) => i.tiles.some((t) => plantKeys.has(`${t.col},${t.row}`)));
+      await db.transaction("rw", db.instances, async () => {
+        for (const inst of affected) {
+          const kept = inst.tiles.filter((t) => !plantKeys.has(`${t.col},${t.row}`));
+          if (kept.length === 0) await db.instances.delete(inst.id);
+          else await db.instances.put({ ...inst, tiles: kept });
+        }
+      });
+    }
+    await mutateGarden((g) => {
+      for (const c of cells) {
+        if (plantKeys.has(`${c.col},${c.row}`)) continue; // a plant was the top item here
+        if (!removeOverlayAt(g.field, c.col, c.row)) setGround(g.field, c.col, c.row, "grass");
+      }
+    });
+    setSelected(null);
+  }
+
+  // Resize the field, dropping carved ground / overlays / plant tiles now off-grid.
+  async function resizeField(cols: number, rows: number) {
+    await mutateGarden((g) => { g.field.cols = cols; g.field.rows = rows; pruneFieldToBounds(g.field); });
+    const all = await db.instances.where("gardenId").equals(garden.id).toArray();
+    const trims = all.filter((i) => i.tiles.some((t) => t.col >= cols || t.row >= rows));
+    if (trims.length) {
+      await db.transaction("rw", db.instances, async () => {
+        for (const inst of trims) {
+          const kept = inst.tiles.filter((t) => t.col < cols && t.row < rows);
+          if (kept.length === 0) await db.instances.delete(inst.id);
+          else await db.instances.put({ ...inst, tiles: kept });
+        }
+      });
+    }
+  }
+
   const selectedGround = selected ? groundTypeAt(garden.field, selected.col, selected.row) : undefined;
   const selectedElev = selected ? elevationAt(garden.field, selected.col, selected.row) : 0;
   const selectedPlant = selected ? plantOccupant(instances, selected.col, selected.row) : undefined;
@@ -335,7 +391,10 @@ function DesignerBody({
             selected={selected}
             pendingOverlay={pendingOverlay}
             fieldMode={fieldMode}
+            paintMode={paintMode}
+            paintColor={paintColor}
             onCellTap={(c, r) => void applyToolAtCell(c, r)}
+            onPaintCells={(cells) => void paintCells(cells)}
             height={460}
           />
 
@@ -358,7 +417,8 @@ function DesignerBody({
             cols={garden.field.cols}
             rows={garden.field.rows}
             soilDrainage={garden.field.soilDrainage}
-            onChange={(patch) => void mutateGarden((g) => Object.assign(g.field, patch))}
+            onResize={(c, r) => void resizeField(c, r)}
+            onDrainage={(d) => void mutateGarden((g) => { g.field.soilDrainage = d; })}
           />
 
           {/* inspector */}
@@ -406,30 +466,41 @@ function FieldConfig({
   cols,
   rows,
   soilDrainage,
-  onChange,
+  onResize,
+  onDrainage,
 }: {
   cols: number;
   rows: number;
   soilDrainage: SoilDrainage;
-  onChange: (patch: Partial<Pick<GardenField, "cols" | "rows" | "soilDrainage">>) => void;
+  onResize: (cols: number, rows: number) => void;
+  onDrainage: (d: SoilDrainage) => void;
 }) {
+  // Uncontrolled inputs committed on blur/Enter — so a half-typed "1" can't
+  // momentarily shrink the field and trim everything. `key` resyncs after edits.
   return (
     <details className="mt-3 rounded-lg border border-[var(--color-paper-deep)] bg-white/40 p-2 text-xs dark:bg-white/5">
       <summary className="cursor-pointer font-medium">Field · {cols}×{rows} cells</summary>
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <label>Width (cells)
-          <input type="number" min={1} max={64} value={cols} onChange={(e) => onChange({ cols: clampInt(e.target.value, 1, 64) })} className="mt-1 block w-20 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
+          <input key={`w${cols}`} type="number" min={1} max={64} defaultValue={cols}
+            onBlur={(e) => onResize(clampInt(e.target.value, 1, 64), rows)}
+            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+            className="mt-1 block w-20 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
         </label>
         <label>Height (cells)
-          <input type="number" min={1} max={64} value={rows} onChange={(e) => onChange({ rows: clampInt(e.target.value, 1, 64) })} className="mt-1 block w-20 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
+          <input key={`h${rows}`} type="number" min={1} max={64} defaultValue={rows}
+            onBlur={(e) => onResize(cols, clampInt(e.target.value, 1, 64))}
+            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+            className="mt-1 block w-20 rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20" />
         </label>
         <label>Soil Drainage
-          <select value={soilDrainage} onChange={(e) => onChange({ soilDrainage: e.target.value as SoilDrainage })} className="mt-1 block rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20">
+          <select value={soilDrainage} onChange={(e) => onDrainage(e.target.value as SoilDrainage)} className="mt-1 block rounded border border-[var(--color-paper-deep)] bg-white/60 px-1.5 py-1 dark:bg-black/20">
             <option value="fast">Fast</option>
             <option value="moderate">Moderate</option>
             <option value="poor">Poor</option>
           </select>
         </label>
+        <span className="text-[10px] text-[var(--color-ink-soft)]">Enter/tab out to resize. Shrinking trims off-grid cells.</span>
       </div>
     </details>
   );

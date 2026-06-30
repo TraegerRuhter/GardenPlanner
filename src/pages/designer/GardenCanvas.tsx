@@ -26,7 +26,13 @@ export interface CanvasProps {
   selected: { col: number; row: number } | null;
   pendingOverlay: { col: number; row: number; sub: OverlaySub } | null;
   fieldMode: boolean;
+  /** When true the active tool brushes cells on drag (carving) instead of panning. */
+  paintMode: boolean;
+  /** Translucent preview color for the brush stroke. */
+  paintColor: string;
   onCellTap: (col: number, row: number) => void;
+  /** Commit a brushed stroke (one cell for a click, many for a drag). */
+  onPaintCells: (cells: Array<{ col: number; row: number }>) => void;
   height: number;
 }
 
@@ -41,13 +47,20 @@ export function GardenCanvas({
   selected,
   pendingOverlay,
   fieldMode,
+  paintMode,
+  paintColor,
   onCellTap,
+  onPaintCells,
   height,
 }: CanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(800);
   const [scale, setScale] = useState(1);
+  const paintingRef = useRef(false);
+  const strokeRef = useRef<Map<string, { col: number; row: number }>>(new Map());
+  const lastCellRef = useRef<{ col: number; row: number } | null>(null);
+  const [stroke, setStroke] = useState<Array<{ col: number; row: number }>>([]);
   const { field } = garden;
   const fieldW = field.cols * TILE_PX;
   const fieldH = field.rows * TILE_PX;
@@ -109,6 +122,41 @@ export function GardenCanvas({
     setScale(next);
   }
 
+  // --- drag-to-paint brushing (ground / elevation / erase) ---
+  function pushStrokeCell(c: { col: number; row: number }) {
+    const key = `${c.col},${c.row}`;
+    if (!strokeRef.current.has(key)) {
+      strokeRef.current.set(key, c);
+      setStroke([...strokeRef.current.values()]);
+    }
+    lastCellRef.current = c;
+  }
+  function beginPaint() {
+    paintingRef.current = true;
+    strokeRef.current = new Map();
+    lastCellRef.current = null;
+    setStroke([]);
+    const c = cellFromPointer();
+    if (c) pushStrokeCell(c);
+  }
+  function movePaint() {
+    if (!paintingRef.current) return;
+    const c = cellFromPointer();
+    if (!c) return;
+    const last = lastCellRef.current;
+    if (last) for (const mid of cellsBetween(last, c)) pushStrokeCell(mid);
+    else pushStrokeCell(c);
+  }
+  function endPaint() {
+    if (!paintingRef.current) return;
+    paintingRef.current = false;
+    const cells = [...strokeRef.current.values()];
+    strokeRef.current = new Map();
+    lastCellRef.current = null;
+    setStroke([]);
+    if (cells.length) onPaintCells(cells);
+  }
+
   // grid lines (edit aid, field mode only)
   const gridLines: React.ReactNode[] = [];
   if (fieldMode) {
@@ -135,7 +183,9 @@ export function GardenCanvas({
   for (const inst of instances) {
     const plant = plantsById.get(inst.plantId);
     if (!plant) continue;
-    const stage = inst.status === "planned" ? "planted" : inst.currentStage;
+    // Planned placements preview as a translucent mature plant so you can see
+    // what — and where — you've placed; active plants show their real stage.
+    const stage = inst.status === "planned" ? "harvest" : inst.currentStage;
     const url = spriteFor(plant.iconKey, plant.category, stage, 2);
     const ghost = inst.status === "planned";
     const ripe = inst.status === "active" && inst.currentStage === "harvest";
@@ -167,19 +217,27 @@ export function GardenCanvas({
     <Circle x={(pendingOverlay.col + 0.5) * TILE_PX} y={(pendingOverlay.row + 0.5) * TILE_PX} radius={TILE_PX * 0.32} stroke={OVERLAYS[pendingOverlay.sub]?.color ?? "#4f8fc4"} strokeWidth={2} dash={[4, 3]} listening={false} />
   ) : null;
 
+  const strokeRects = stroke.map((c) => (
+    <Rect key={`pp${c.col},${c.row}`} x={c.col * TILE_PX} y={c.row * TILE_PX} width={TILE_PX} height={TILE_PX} fill={paintColor} opacity={0.45} listening={false} />
+  ));
+
   return (
     <div ref={wrapRef} className="relative overflow-hidden rounded-xl border border-[var(--color-paper-deep)] bg-[#5f9f46]">
       <Stage
         ref={stageRef}
         width={width}
         height={height}
-        draggable
+        draggable={!paintMode}
         onWheel={(e) => {
           e.evt.preventDefault();
           zoomStep(e.evt.deltaY > 0 ? -1 : 1, e.target.getStage()!.getPointerPosition() ?? undefined);
         }}
-        onClick={() => { const c = cellFromPointer(); if (c) onCellTap(c.col, c.row); }}
-        onTap={() => { const c = cellFromPointer(); if (c) onCellTap(c.col, c.row); }}
+        onPointerDown={() => { if (paintMode) beginPaint(); }}
+        onPointerMove={() => { if (paintMode) movePaint(); }}
+        onPointerUp={() => { if (paintMode) endPaint(); }}
+        onPointerLeave={() => { if (paintMode) endPaint(); }}
+        onClick={() => { if (!paintMode) { const c = cellFromPointer(); if (c) onCellTap(c.col, c.row); } }}
+        onTap={() => { if (!paintMode) { const c = cellFromPointer(); if (c) onCellTap(c.col, c.row); } }}
         className="touch-none"
       >
         <Layer imageSmoothingEnabled={false}>
@@ -190,6 +248,7 @@ export function GardenCanvas({
           {gridLines}
           {overlayNodes}
           {plantNodes}
+          {strokeRects}
           {selected && (
             <Rect x={selected.col * TILE_PX} y={selected.row * TILE_PX} width={TILE_PX} height={TILE_PX} stroke="#f3c14b" strokeWidth={2.5} listening={false} />
           )}
@@ -213,6 +272,18 @@ export function GardenCanvas({
       </div>
     </div>
   );
+}
+
+/** Integer cells from a (exclusive) to b (inclusive) — fills drag-stroke gaps. */
+function cellsBetween(a: { col: number; row: number }, b: { col: number; row: number }): Array<{ col: number; row: number }> {
+  const steps = Math.max(Math.abs(b.col - a.col), Math.abs(b.row - a.row));
+  if (steps === 0) return [{ col: b.col, row: b.row }];
+  const out: Array<{ col: number; row: number }> = [];
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    out.push({ col: Math.round(a.col + (b.col - a.col) * t), row: Math.round(a.row + (b.row - a.row) * t) });
+  }
+  return out;
 }
 
 /** Cell-center points along an overlay's segments (drip emitter spots). */
