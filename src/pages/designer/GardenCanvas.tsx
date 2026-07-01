@@ -8,8 +8,8 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Circle, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
-import type Konva from "konva";
+import { Circle, Ellipse, Group, Image as KImage, Layer, Line, Rect, Stage } from "react-konva";
+import Konva from "konva";
 import type { FieldOverlay, Garden, OverlaySub, Plant, PlantInstance } from "../../types/models";
 import type { SunMap } from "../../engines/sunModel";
 import { tileKey } from "../../engines/sunModel";
@@ -254,6 +254,8 @@ export function GardenCanvas({
           )}
           {pendingMarker}
         </Layer>
+        {/* ambient life only in the lively Preview mode; stark & still while editing */}
+        {!fieldMode && <CreatureLayer fieldW={fieldW} fieldH={fieldH} />}
       </Stage>
 
       {/* zoom + compass HUD */}
@@ -298,6 +300,118 @@ function emittersAlong(o: FieldOverlay): Array<{ x: number; y: number }> {
     }
   }
   return out;
+}
+
+// ---------------- ambient life (Preview mode only) ----------------
+const WING_PALETTES: Array<[string, string]> = [
+  ["#e8743b", "#f2a65a"], ["#5566b0", "#88b0f0"], ["#e76fb3", "#f4a3d0"], ["#f2c12e", "#f7d96a"], ["#d6544a", "#f0897f"],
+];
+
+interface Creature {
+  kind: "butterfly" | "bee";
+  x: number; y: number; heading: number; speed: number;
+  turn: number; wobble: number; flap: number; seed: number; dir: 1 | -1;
+  colors: [string, string];
+}
+function makeCreatures(w: number, h: number): Creature[] {
+  const out: Creature[] = [];
+  for (let i = 0; i < 5; i++) {
+    const bee = i % 3 === 2;
+    out.push({
+      kind: bee ? "bee" : "butterfly",
+      x: Math.random() * w, y: Math.random() * h,
+      heading: Math.random() * Math.PI * 2,
+      speed: bee ? 42 : 20 + Math.random() * 12,
+      turn: 1 + Math.random() * 1.2,
+      wobble: 0.5 + Math.random() * 0.7,
+      flap: bee ? 26 : 8 + Math.random() * 3,
+      seed: Math.random() * 10,
+      dir: Math.random() < 0.5 ? 1 : -1,
+      colors: WING_PALETTES[i % WING_PALETTES.length],
+    });
+  }
+  return out;
+}
+
+function ButterflyBody({ colors }: { colors: [string, string] }) {
+  return (
+    <>
+      <Ellipse x={-3} y={0} radiusX={3} radiusY={4.5} fill={colors[0]} opacity={0.92} />
+      <Ellipse x={3} y={0} radiusX={3} radiusY={4.5} fill={colors[1]} opacity={0.92} />
+      <Rect x={-0.5} y={-4} width={1} height={8} cornerRadius={0.5} fill="#3a2a18" />
+    </>
+  );
+}
+function BeeBody() {
+  return (
+    <>
+      <Ellipse x={-2.5} y={-2.5} radiusX={3} radiusY={2} fill="#ffffff" opacity={0.6} />
+      <Ellipse x={2.5} y={-2.5} radiusX={3} radiusY={2} fill="#ffffff" opacity={0.6} />
+      <Ellipse x={0} y={0} radiusX={4.5} radiusY={3} fill="#f2c12e" />
+      <Rect x={-2.5} y={-3} width={1.4} height={6} fill="#3a2a18" />
+      <Rect x={0.6} y={-3} width={1.4} height={6} fill="#3a2a18" />
+    </>
+  );
+}
+
+/** A separate Konva layer that drifts butterflies/bees + a soft wind sweep over
+ *  the field. Its Konva.Animation runs on rAF (auto-paused when the tab hides);
+ *  it only mounts in Preview mode, so editing stays stark and still. */
+function CreatureLayer({ fieldW, fieldH }: { fieldW: number; fieldH: number }) {
+  const layerRef = useRef<Konva.Layer>(null);
+  const shimmerRef = useRef<Konva.Rect>(null);
+  const creatures = useMemo(() => makeCreatures(fieldW, fieldH), [fieldW, fieldH]);
+  const motion = useRef<Creature[]>(creatures.map((c) => ({ ...c })));
+  const nodes = useRef<Array<Konva.Group | null>>([]);
+
+  useEffect(() => {
+    motion.current = creatures.map((c) => ({ ...c }));
+    const layer = layerRef.current;
+    if (!layer) return;
+    const anim = new Konva.Animation((frame) => {
+      if (!frame) return;
+      const dt = Math.min(0.05, frame.timeDiff / 1000);
+      const t = frame.time / 1000;
+      const m = 16;
+      motion.current.forEach((c, i) => {
+        c.heading += Math.sin(t * c.wobble + c.seed) * c.turn * dt;
+        c.x += Math.cos(c.heading) * c.speed * dt;
+        c.y += Math.sin(c.heading) * c.speed * dt;
+        if (c.x < -m) c.x = fieldW + m; else if (c.x > fieldW + m) c.x = -m;
+        if (c.y < -m) c.y = fieldH + m; else if (c.y > fieldH + m) c.y = -m;
+        const node = nodes.current[i];
+        if (!node) return;
+        node.x(c.x);
+        node.y(c.y);
+        node.scaleX((0.5 + Math.abs(Math.sin(t * c.flap)) * 0.5) * c.dir); // wing beat
+        node.rotation(Math.sin(t * c.wobble + c.seed) * 8);
+      });
+      const band = shimmerRef.current;
+      if (band) band.x(((t * 46) % (fieldW + 240)) - 120);
+    }, layer);
+    anim.start();
+    return () => { anim.stop(); };
+  }, [creatures, fieldW, fieldH]);
+
+  return (
+    <Layer ref={layerRef} listening={false}>
+      <Rect
+        ref={shimmerRef}
+        x={-120}
+        y={0}
+        width={140}
+        height={fieldH}
+        fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+        fillLinearGradientEndPoint={{ x: 140, y: 0 }}
+        fillLinearGradientColorStops={[0, "rgba(255,255,255,0)", 0.5, "rgba(255,255,255,0.10)", 1, "rgba(255,255,255,0)"]}
+      />
+      {creatures.map((c, i) => (
+        <Group key={i} ref={(n) => { nodes.current[i] = n; }} x={c.x} y={c.y}>
+          {c.kind === "bee" ? <BeeBody /> : <ButterflyBody colors={c.colors} />}
+        </Group>
+      ))}
+    </Layer>
+  );
 }
 
 const imageCache = new Map<string, HTMLImageElement>();
